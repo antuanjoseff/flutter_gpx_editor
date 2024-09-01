@@ -226,7 +226,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _onSymbolTapped(Symbol symbol) async{
      selectedNode = await searchSymbol(symbol);
-     
+     print('---------SELECTED NODE----------------------$selectedNode');
     _selectedSymbol = symbol;
 
     var draggable = _selectedSymbol!.options.draggable;
@@ -326,23 +326,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List<SymbolOptions> makeSymbolOptionsForFillOptions() {
     final symbolOptions = <SymbolOptions>[];
-    for (final coord in gpxCoords) {
-      symbolOptions.add(SymbolOptions(iconImage: 'node-box', geometry: coord));
+    for (var idx = 0; idx < gpxCoords.length - 1; idx++) {
+      LatLng coord = gpxCoords[idx];
+    
+      if (idx % 2 ==0 ) {
+        symbolOptions.add(SymbolOptions(iconImage: 'node-box', geometry: coord));        
+      } else {
+        symbolOptions.add(SymbolOptions(iconImage: 'virtual-box', geometry: coord));
+      }
+      
     }
     return symbolOptions;
   }
 
 
   void addLine(trackSegment) async{
-    LatLng coord;
-    double xmin = trackSegment[0].lon;
-    double xmax = trackSegment[0].lon;
-    // PermissionStatus status = await Permission.storage.request();
-    double ymin = trackSegment[0].lat;
-    double ymax = trackSegment[0].lat;
-
+    LatLng cur;
+    LatLng next;
+      
     if (mapLine != null) {
       gpxCoords = [];
+      rawGpx = [];
       controller!.removeLine(mapLine!);
       if (circlesVisible) {
         circlesVisible = false;
@@ -350,28 +354,33 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
-    for (var i = 0; i < trackSegment.length; i++) {
-      
-      double lat = trackSegment[i].lat;
-      double lng = trackSegment[i].lon;
-
-      if (lat < ymin) {
-        ymin = lat;
-      }
-      if (lat > ymax) {
-        ymax = lat;
-      }
-      if (lng < xmin) {
-        xmin = lng;
-      }
-      if (lng > xmax) {
-        xmax = lng;
-      }
-
-      coord = LatLng(lat, lng);
-      gpxCoords.add(coord);
+    Bounds bounds  = Bounds(
+      LatLng(trackSegment.first.lat, trackSegment.first.lon), 
+      LatLng(trackSegment.first.lat, trackSegment.first.lon)
+    );
+    
+    for (var i = 0; i < trackSegment.length - 1; i++) {
+      cur = LatLng(trackSegment[i].lat, trackSegment[i].lon);
+      bounds.expand(cur);
+      gpxCoords.add(cur);
       rawGpx.add(trackSegment[i]);
+      
+      //add a virtual node in the middle of each segment
+      Wpt halfNode = halfSegmentNode(trackSegment[i], trackSegment[i+1]);
+      rawGpx.add(halfNode);
+
+      next = LatLng(halfNode.lat!, halfNode.lon!);
+      gpxCoords.add(next);
     }    
+
+    //Last point. No mid node required
+    int last = trackSegment.length - 1;
+    cur = LatLng(trackSegment[last].lat, trackSegment[last].lon);
+    bounds.expand(cur);
+    gpxCoords.add(cur);
+    rawGpx.add(trackSegment[last]);
+
+    print('                        RAWGPX LENGTH ${rawGpx.length}');
 
     mapLine = await controller!.addLine(
       LineOptions(
@@ -385,8 +394,8 @@ class _MyHomePageState extends State<MyHomePage> {
     controller!.moveCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
-          southwest: LatLng(ymin, xmin),
-          northeast: LatLng(ymax, xmax),
+          southwest: bounds.southEast!,
+          northeast: bounds.northWest!,
         ),
         left: 10,
         top: 5,
@@ -439,11 +448,20 @@ class _MyHomePageState extends State<MyHomePage> {
             icon: const Icon(Icons.save),
             tooltip: 'Show Snackbar',
             onPressed: () async {
+              removeSymbols();
               var gpx = GeoXml();
               gpx.creator = "dart-gpx library";
               
               gpx.metadata = gpxOriginal!.metadata;
-              Trkseg trkseg = Trkseg(trkpts: rawGpx);
+              List<Wpt> newGpx = [];
+              for (var idx = 0; idx < rawGpx.length; idx++ ){
+                if (idx % 2 == 0) {
+                  newGpx.add(rawGpx[idx]);
+                }
+              }
+
+              print('                        NEWGPX LENGTH ${newGpx.length}');
+              Trkseg trkseg = Trkseg(trkpts: newGpx);
 
               gpx.trks = [
                 Trk(
@@ -451,7 +469,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ];
 
               // generate xml string
-              var gpxString = gpx.toGpxString(pretty: true);          
+              var gpxString = gpx.toGpxString(pretty: true); 
               
               String? outputFile = await FilePicker.platform.saveFile(
                 dialogTitle: 'Please select an output file:',
@@ -470,6 +488,8 @@ class _MyHomePageState extends State<MyHomePage> {
               if (result != null) {
                 filename = result.files.single.path!.toString();
                 fileName = result.files.single.name.toString();
+
+                // TO DO. Check for invalid file format
                 final stream = await utf8.decoder.bind(
                   File(filename!).openRead()
                 ).join();
@@ -497,6 +517,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onStyleLoadedCallback: () {
             addImageFromAsset(controller!, "node-box", "assets/symbols/box.png");
             addImageFromAsset(controller!, "selected-box", "assets/symbols/selected-box.png");
+            addImageFromAsset(controller!, "virtual-box", "assets/symbols/virtual-box.png");
           },
           initialCameraPosition: const CameraPosition(
             target: LatLng(42.0, 3.0),
@@ -508,5 +529,32 @@ class _MyHomePageState extends State<MyHomePage> {
         ),      
       
     );
-  }  
+  }
+}
+
+class Bounds {
+  LatLng southEast = const LatLng(90, 179.9);
+  LatLng northWest = const LatLng(-90, -180);
+  // Constructor
+  Bounds(LatLng southEast, LatLng northWest);
+
+  expand(LatLng coord){
+     if (coord.latitude < southEast.latitude) {
+        southEast = LatLng(coord.latitude, southEast.longitude);
+     }
+       
+     if (coord.longitude < southEast.longitude) {
+        southEast = LatLng(southEast.latitude, coord.longitude);
+      }
+
+     if (coord.latitude > northWest.latitude) {
+        northWest = LatLng(coord.latitude, northWest.longitude);
+      }  
+       
+     if (coord.longitude > northWest.longitude) {
+        northWest = LatLng(northWest.latitude, coord.longitude);
+      }
+     
+  }
+
 }
