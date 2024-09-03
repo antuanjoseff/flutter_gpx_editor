@@ -75,6 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
   List<Symbol> virtualSymbols =
       []; //Symbols on map to allow adding new NODES to the gpx track
+  List<Symbol?> neighbouringNodes = [];
   bool circlesVisible = false;
   List<CircleOptions> circleOptions = [];
   List<Wpt> rawGpx = [];
@@ -147,9 +148,9 @@ class _MyHomePageState extends State<MyHomePage> {
     int found = -1;
     int i = 0;
 
-    while (found == -1 && i < realSymbols.length) {
-      if (realSymbols[i].options.geometry!.latitude == search.latitude &&
-          realSymbols[i].options.geometry!.longitude == search.longitude) {
+    while (found == -1 && i < realNodes.length) {
+      if (realNodes[i].latitude == search.latitude &&
+          realNodes[i].longitude == search.longitude) {
         found = i;
       } else {
         i++;
@@ -157,9 +158,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     i = 0;
-    while (found == -1 && i < virtualSymbols.length) {
-      if (virtualSymbols[i].options.geometry!.latitude == search.latitude &&
-          virtualSymbols[i].options.geometry!.longitude == search.longitude) {
+    while (found == -1 && i < virtualNodes.length) {
+      if (virtualNodes[i].latitude == search.latitude &&
+          virtualNodes[i].longitude == search.longitude) {
         found = i;
         type = 'virtual';
       } else {
@@ -167,6 +168,8 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
+    print(
+        'FOUND SYMBOL AT POSITION   ------------------------------------  $found');
     if (found != -1) {
       return (found, type);
     } else {
@@ -195,8 +198,8 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {});
   }
 
-  void _updateSelectedSymbol(SymbolOptions changes) async {
-    await controller!.updateSymbol(_selectedSymbol!, changes);
+  void _updateSelectedSymbol(Symbol selected, SymbolOptions changes) async {
+    await controller!.updateSymbol(selected!, changes);
     setState(() {});
   }
 
@@ -206,22 +209,44 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onSymbolTapped(Symbol symbol) async {
+    LatLng latlon = LatLng(
+      symbol.toGeoJson()['geometry']['coordinates'][0],
+      symbol.toGeoJson()['geometry']['coordinates'][1],
+    );
+
+    print('TAPPED SYMBOL COORDINATES ---------------------------- $latlon');
     var (selected, type) = await searchSymbol(symbol);
     selectedNode = selected;
     selectedNodeType = type;
     _selectedSymbol = symbol;
-    print(
-        '**************** SELECTED NODE           $selectedNode         type     $selectedNodeType');
+
+    // if realNode is being dragged, then get the two virtualNodes neighbouring the dragging realNode
+    neighbouringNodes = [];
+    if (type == 'real') {
+      if (selectedNode == 0) {
+        neighbouringNodes.add(null);
+      } else {
+        neighbouringNodes.add(virtualSymbols[selectedNode - 1]);
+      }
+      if (selectedNode == realNodes.length - 1) {
+        neighbouringNodes.add(null);
+      } else {
+        neighbouringNodes.add(virtualSymbols[selectedNode]);
+      }
+    }
+
     var draggable = _selectedSymbol!.options.draggable;
 
     draggable ??= false;
     draggable = !draggable;
     if (draggable) {
       _updateSelectedSymbol(
+        _selectedSymbol!,
         const SymbolOptions(draggable: true, iconImage: 'selected-box'),
       );
     } else {
       _updateSelectedSymbol(
+        _selectedSymbol!,
         const SymbolOptions(draggable: false, iconImage: 'node-box'),
       );
     }
@@ -242,24 +267,68 @@ class _MyHomePageState extends State<MyHomePage> {
         // While node is dragging, redraw gpx line and neighbouring virtual nodes
         if (selectedNodeType == 'real') {}
         updateTrackLine();
+        //Move neighbouring nodes
+        if (selectedNode > 0) {
+          LatLng latlon = halfSegmentSymbol(
+              gpxCoords[selectedNode - 1], gpxCoords[selectedNode]);
+          _updateSelectedSymbol(
+            neighbouringNodes[0]!,
+            SymbolOptions(
+                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+          );
+        }
+
+        if (selectedNode < gpxCoords.length - 1) {
+          LatLng latlon = halfSegmentSymbol(
+              gpxCoords[selectedNode], gpxCoords[selectedNode + 1]);
+          _updateSelectedSymbol(
+            neighbouringNodes[1]!,
+            SymbolOptions(
+                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+          );
+        }
         break;
       case DragEventType.end:
-        gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
-        realNodes[selectedNode] = LatLng(current.latitude, current.longitude);
+        LatLng coord = LatLng(current.latitude, current.longitude);
+        gpxCoords[selectedNode] = coord;
+        realNodes[selectedNode] = coord;
         Wpt dragged = rawGpx[selectedNode];
-        dragged.lat = current.latitude;
-        dragged.lon = current.longitude;
+        dragged.lat = coord.latitude;
+        dragged.lon = coord.longitude;
 
         rawGpx[selectedNode] = dragged;
 
         updateTrackLine();
         _updateSelectedSymbol(
+          _selectedSymbol!,
           SymbolOptions(
-              geometry: LatLng(current.latitude, current.longitude),
-              draggable: false,
-              iconImage: 'node-box'),
+              geometry: coord, draggable: false, iconImage: 'node-box'),
         );
-        resetSymbols();
+
+        //Move neighbouring nodes
+        if (selectedNode > 0) {
+          LatLng latlon = halfSegmentSymbol(
+              gpxCoords[selectedNode - 1], gpxCoords[selectedNode]);
+          _updateSelectedSymbol(
+            neighbouringNodes[0]!,
+            SymbolOptions(
+                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+          );
+        }
+
+        if (selectedNode < gpxCoords.length - 1) {
+          LatLng latlon = halfSegmentSymbol(
+              gpxCoords[selectedNode], gpxCoords[selectedNode + 1]);
+          _updateSelectedSymbol(
+            neighbouringNodes[1]!,
+            SymbolOptions(
+                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+          );
+        }
+
+        // removeSymbols();
+        // addSymbols();
+
         break;
     }
   }
