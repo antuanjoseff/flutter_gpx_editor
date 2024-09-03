@@ -10,7 +10,12 @@ Future<void> addImageFromAsset(
   return controller.addImage(name, list);
 }
 
-Wpt halfSegmentNode(Wpt first, Wpt last) {
+LatLng halfSegmentSymbol(LatLng first, LatLng last) {
+  return LatLng((first.latitude + last.latitude) / 2,
+      (first.longitude + last.longitude) / 2);
+}
+
+Wpt halfSegmentWpt(Wpt first, Wpt last) {
   Wpt half = Wpt(
       lat: first.lat,
       lon: first.lon,

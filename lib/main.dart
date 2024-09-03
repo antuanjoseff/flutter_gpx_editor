@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geoxml/geoxml.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:external_path/external_path.dart';
 import 'util.dart';
-import 'dart:typed_data';
 import 'dart:convert' show utf8;
 import 'package:double_back_to_close/double_back_to_close.dart';
 
@@ -74,18 +71,22 @@ class _MyHomePageState extends State<MyHomePage> {
   List<LatLng> gpxCoords = [];
   Line? mapLine;
   List<Circle> mapCircles = [];
-  List<Symbol> mapSymbols = [];
+  List<Symbol> realSymbols =
+      []; //Symbols on map to allow dragging the existing NODES of the gpx track
+  List<Symbol> virtualSymbols =
+      []; //Symbols on map to allow adding new NODES to the gpx track
   bool circlesVisible = false;
   List<CircleOptions> circleOptions = [];
-  List<(Wpt, int)> rawGpx = [];
+  List<Wpt> rawGpx = [];
+  List<LatLng> realNodes = [];
+  List<LatLng> virtualNodes = [];
   String? filename;
   String? fileName;
   List<(int, Wpt, String)> edits = [];
   Circle? _selectedCircle;
   Symbol? _selectedSymbol;
   int selectedNode = -1;
-  static const int realNode = 0;
-  static const int virtualNode = 1;
+  String selectedNodeType = '';
 
   var lineSegment;
   GeoXml? gpxOriginal;
@@ -100,33 +101,10 @@ class _MyHomePageState extends State<MyHomePage> {
     controller = mapController;
     // controller!.onCircleTapped.add(_onCircleTapped);
     controller!.onSymbolTapped.add(_onSymbolTapped);
-    controller!.onFeatureDrag.add(_onCircleDrag);
+    controller!.onFeatureDrag.add(_onNodeDrag);
   }
 
-  void undoMove(idx, wpt) async {
-    rawGpx[idx] = wpt;
-    LatLng latlng = LatLng(wpt.lat!, wpt.lon!);
-    gpxCoords[idx] = latlng;
-
-    controller!.removeLine(mapLine!);
-
-    mapLine = await controller!.addLine(
-      LineOptions(
-        geometry: gpxCoords,
-        lineColor: "#ff0000",
-        lineWidth: 1.5,
-        lineOpacity: 0.9,
-      ),
-    );
-
-    Symbol symbol = mapSymbols.first;
-    symbol.toGeoJson()['geometry']['coordinates'] = latlng;
-
-    mapSymbols.insert(idx, symbol);
-    removeSymbols();
-    addSymbols();
-    setState(() {});
-  }
+  void undoMove(idx, wpt) async {}
 
   void undo() async {
     if (edits.isEmpty) return;
@@ -146,9 +124,9 @@ class _MyHomePageState extends State<MyHomePage> {
     bool found = false;
     int i = 0;
 
-    while (!found && i < mapCircles.length) {
-      if (mapCircles[i].options.geometry!.latitude == search.latitude &&
-          mapCircles[i].options.geometry!.longitude == search.longitude) {
+    while (!found && i < realNodes.length) {
+      if (realNodes[i].latitude == search.latitude &&
+          realNodes[i].longitude == search.longitude) {
         found = true;
       } else {
         i++;
@@ -162,25 +140,37 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<int> searchSymbol(Symbol symbol) async {
+  Future<(int, String)> searchSymbol(Symbol symbol) async {
+    String type = 'real';
     var search = LatLng(symbol.toGeoJson()['geometry']['coordinates'][1],
         symbol.toGeoJson()['geometry']['coordinates'][0]);
-    bool found = false;
+    int found = -1;
     int i = 0;
 
-    while (!found && i < mapSymbols.length) {
-      if (mapSymbols[i].options.geometry!.latitude == search.latitude &&
-          mapSymbols[i].options.geometry!.longitude == search.longitude) {
-        found = true;
+    while (found == -1 && i < realSymbols.length) {
+      if (realSymbols[i].options.geometry!.latitude == search.latitude &&
+          realSymbols[i].options.geometry!.longitude == search.longitude) {
+        found = i;
       } else {
         i++;
       }
     }
 
-    if (found) {
-      return i;
+    i = 0;
+    while (found == -1 && i < virtualSymbols.length) {
+      if (virtualSymbols[i].options.geometry!.latitude == search.latitude &&
+          virtualSymbols[i].options.geometry!.longitude == search.longitude) {
+        found = i;
+        type = 'virtual';
+      } else {
+        i++;
+      }
+    }
+
+    if (found != -1) {
+      return (found, type);
     } else {
-      return -1;
+      return (-1, '');
     }
   }
 
@@ -207,8 +197,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _updateSelectedSymbol(SymbolOptions changes) async {
     await controller!.updateSymbol(_selectedSymbol!, changes);
-    // setState(() {
-    // });
+    setState(() {});
   }
 
   void updateTrackLine() async {
@@ -217,66 +206,28 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onSymbolTapped(Symbol symbol) async {
-    selectedNode = await searchSymbol(symbol);
-    print('---------SELECTED NODE----------------------$selectedNode');
+    var (selected, type) = await searchSymbol(symbol);
+    selectedNode = selected;
+    selectedNodeType = type;
     _selectedSymbol = symbol;
-
+    print(
+        '**************** SELECTED NODE           $selectedNode         type     $selectedNodeType');
     var draggable = _selectedSymbol!.options.draggable;
 
     draggable ??= false;
-    _updateSelectedSymbol(
-      SymbolOptions(draggable: !draggable, iconImage: 'selected-box'),
-    );
-
-    var (e, type) = rawGpx[selectedNode];
-
-    Wpt previous = Wpt(
-        lat: e.lat,
-        lon: e.lon,
-        ele: e.ele,
-        time: e.time,
-        magvar: e.magvar,
-        geoidheight: e.geoidheight,
-        name: e.name,
-        cmt: e.cmt,
-        desc: e.desc,
-        src: e.src,
-        links: e.links,
-        sym: e.sym,
-        type: e.type,
-        fix: e.fix,
-        sat: e.sat,
-        hdop: e.hdop,
-        vdop: e.vdop,
-        pdop: e.pdop,
-        ageofdgpsdata: e.ageofdgpsdata,
-        dgpsid: e.dgpsid,
-        extensions: e.extensions);
-
-    edits.add(
-      (selectedNode, previous, 'moved'),
-    );
+    draggable = !draggable;
+    if (draggable) {
+      _updateSelectedSymbol(
+        const SymbolOptions(draggable: true, iconImage: 'selected-box'),
+      );
+    } else {
+      _updateSelectedSymbol(
+        const SymbolOptions(draggable: false, iconImage: 'node-box'),
+      );
+    }
   }
 
-  void _onCircleTapped(Circle circle) {
-    selectedNode = searchNode(circle);
-    _selectedCircle = circle;
-
-    var draggable = _selectedCircle!.options.draggable;
-
-    draggable ??= false;
-
-    _updateSelectedCircle(
-      CircleOptions(
-          draggable: !draggable,
-          circleRadius: draggable ? 8 : 20,
-          circleColor: draggable ? "#00FF00" : "#FF0000"),
-    );
-
-    // deleteCircle('circle', circle.id, circle);
-  }
-
-  void _onCircleDrag(id,
+  void _onNodeDrag(id,
       {required current,
       required delta,
       required origin,
@@ -285,58 +236,29 @@ class _MyHomePageState extends State<MyHomePage> {
     final DragEventType type = eventType;
     switch (type) {
       case DragEventType.start:
-        // TODO: Handle this case.
         break;
       case DragEventType.drag:
-        // TODO: Handle this case.
-        gpxCoords[selectedNode] = current;
-        print('   SELECTED NODE               $selectedNode');
+        gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
+        // While node is dragging, redraw gpx line and neighbouring virtual nodes
+        if (selectedNodeType == 'real') {}
         updateTrackLine();
         break;
       case DragEventType.end:
-        var (dragged, nodeType) = rawGpx[selectedNode];
+        gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
+        realNodes[selectedNode] = LatLng(current.latitude, current.longitude);
+        Wpt dragged = rawGpx[selectedNode];
         dragged.lat = current.latitude;
         dragged.lon = current.longitude;
 
-        gpxCoords[selectedNode] = current;
-        if (nodeType == virtualNode) {
-          // add new halfNodes in the new segment, and make it REAL from virtualNode
-          rawGpx[selectedNode] = (
-            dragged,
-            realNode,
-          );
-
-          var (next, lastNodeType) = rawGpx[selectedNode + 1];
-          Wpt nextNode = halfSegmentNode(dragged, next);
-          rawGpx.insert(selectedNode + 1, (
-            nextNode,
-            virtualNode,
-          ));
-          gpxCoords.insert(
-              selectedNode + 1, LatLng(nextNode.lat!, nextNode.lon!));
-
-          var (prev, prevNodeType) = rawGpx[selectedNode - 1];
-          Wpt prevNode = halfSegmentNode(prev, dragged);
-          rawGpx.insert(selectedNode - 1, (
-            prevNode,
-            virtualNode,
-          ));
-          gpxCoords.insert(
-              selectedNode - 1, LatLng(prevNode.lat!, prevNode.lon!));
-        } else {
-          rawGpx[selectedNode] = (
-            dragged,
-            realNode,
-          );
-        }
+        rawGpx[selectedNode] = dragged;
 
         updateTrackLine();
-        // _updateSelectedSymbol(
-        //   SymbolOptions(
-        //       geometry: gpxCoords[selectedNode],
-        //       draggable: false,
-        //       iconImage: 'node-box'),
-        // );
+        _updateSelectedSymbol(
+          SymbolOptions(
+              geometry: LatLng(current.latitude, current.longitude),
+              draggable: false,
+              iconImage: 'node-box'),
+        );
         resetSymbols();
         break;
     }
@@ -358,13 +280,37 @@ class _MyHomePageState extends State<MyHomePage> {
     mapCircles = await controller!.addCircles(circleOptions);
   }
 
+  List<SymbolOptions> makeSymbolOptions(nodes, symbolIcon) {
+    final symbolOptions = <SymbolOptions>[];
+
+    for (var idx = 0; idx < nodes.length; idx++) {
+      LatLng coord = nodes[idx];
+      symbolOptions.add(SymbolOptions(iconImage: symbolIcon, geometry: coord));
+    }
+
+    return symbolOptions;
+  }
+
+  void addRealSymbols() async {
+    realSymbols =
+        await controller!.addSymbols(makeSymbolOptions(realNodes, 'node-box'));
+  }
+
+  void addVirtualSymbols() async {
+    virtualSymbols = await controller!
+        .addSymbols(makeSymbolOptions(virtualNodes, 'virtual-box'));
+  }
+
   void addSymbols() async {
-    mapSymbols = await controller!.addSymbols(makeSymbolOptions());
+    addRealSymbols();
+    addVirtualSymbols();
   }
 
   void removeSymbols() async {
-    await controller!.removeSymbols(mapSymbols);
-    mapSymbols = [];
+    await controller!.removeSymbols(virtualSymbols);
+    await controller!.removeSymbols(realSymbols);
+    realSymbols = [];
+    virtualSymbols = [];
   }
 
   void resetSymbols() {
@@ -372,31 +318,11 @@ class _MyHomePageState extends State<MyHomePage> {
     addSymbols();
   }
 
-  List<SymbolOptions> makeSymbolOptions() {
-    final symbolOptions = <SymbolOptions>[];
-    print('rawgps length ${rawGpx.length}');
-    for (var idx = 0; idx < rawGpx.length; idx++) {
-      var (wpt, i) = rawGpx[idx];
-      LatLng coord = LatLng(wpt.lat!, wpt.lon!);
-
-      if (i == realNode) {
-        symbolOptions
-            .add(SymbolOptions(iconImage: 'node-box', geometry: coord));
-      } else {
-        symbolOptions
-            .add(SymbolOptions(iconImage: 'virtual-box', geometry: coord));
-      }
-    }
-    return symbolOptions;
-  }
-
   void addLine(trackSegment) async {
     LatLng cur;
     LatLng next;
 
     if (mapLine != null) {
-      gpxCoords = [];
-      rawGpx = [];
       controller!.removeLine(mapLine!);
       if (circlesVisible) {
         circlesVisible = false;
@@ -410,19 +336,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
     for (var i = 0; i < trackSegment.length - 1; i++) {
       cur = LatLng(trackSegment[i].lat, trackSegment[i].lon);
+      next = LatLng(trackSegment[i + 1].lat, trackSegment[i + 1].lon);
       bounds.expand(cur);
       gpxCoords.add(cur);
-      rawGpx.add(
-        (trackSegment[i], realNode),
-      );
+      realNodes.add(cur);
+      rawGpx.add(trackSegment[i]);
+
+      virtualNodes.add(halfSegmentSymbol(cur, next));
 
       //add a virtual node in the middle of each segment
-      Wpt halfNode = halfSegmentNode(trackSegment[i], trackSegment[i + 1]);
-      rawGpx.add(
-        (halfNode, virtualNode),
-      );
-      next = LatLng(halfNode.lat!, halfNode.lon!);
-      gpxCoords.add(next);
+      // Wpt halfNode = halfSegmentWpt(trackSegment[i], trackSegment[i + 1]);
+      // rawGpx.add(
+      //   (halfNode, virtualNode),
+      // );
+      // next = LatLng(halfNode.lat!, halfNode.lon!);
+      // gpxCoords.add(next);
     }
 
     //Last point. No mid node required
@@ -430,9 +358,7 @@ class _MyHomePageState extends State<MyHomePage> {
     cur = LatLng(trackSegment[last].lat, trackSegment[last].lon);
     bounds.expand(cur);
     gpxCoords.add(cur);
-    rawGpx.add(
-      (trackSegment[last], realNode),
-    );
+    rawGpx.add(trackSegment[last]);
 
     mapLine = await controller!.addLine(
       LineOptions(
@@ -514,11 +440,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       gpx.metadata = gpxOriginal!.metadata;
                       List<Wpt> newGpx = [];
                       for (var idx = 0; idx < rawGpx.length; idx++) {
-                        var (wpt, i) = rawGpx[idx];
-
-                        if (i == realNode) {
-                          newGpx.add(wpt);
-                        }
+                        Wpt wpt = rawGpx[idx];
+                        newGpx.add(wpt);
                       }
 
                       Trkseg trkseg = Trkseg(trkpts: newGpx);
@@ -556,6 +479,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 gpxOriginal = await GeoXml.fromGpxString(stream);
 
                 setState(() {
+                  realNodes = [];
+                  virtualNodes = [];
+                  realSymbols = [];
+                  virtualSymbols = [];
+                  gpxCoords = [];
+                  rawGpx = [];
+
                   // get only first track segment
                   lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
                   addLine(lineSegment);
