@@ -92,6 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String selectedNodeType = '';
 
   final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
   var lineSegment;
   GeoXml? gpxOriginal;
@@ -173,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     print(
-        'FOUND SYMBOL AT POSITION   ------------------------------------  $found');
+        'FOUND SYMBOL AT POSITION   ----------------------  $found ----------------  $type');
     if (found != -1) {
       return (found, type);
     } else {
@@ -239,6 +240,10 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
+    // if (type == 'virtual') {
+    //   realNodes.insert(selectedNode, latlon);
+    // }
+
     var draggable = _selectedSymbol!.options.draggable;
 
     draggable ??= false;
@@ -262,6 +267,27 @@ class _MyHomePageState extends State<MyHomePage> {
       required origin,
       required point,
       required eventType}) {
+    deb.debounce(() {
+      print('DEBOUNCE .....................');
+      LatLng coord = LatLng(current.latitude, current.longitude);
+      gpxCoords[selectedNode] = coord;
+      realNodes[selectedNode] = coord;
+      Wpt dragged = rawGpx[selectedNode];
+      dragged.lat = coord.latitude;
+      dragged.lon = coord.longitude;
+
+      rawGpx[selectedNode] = dragged;
+
+      updateTrackLine();
+      _updateSelectedSymbol(
+        _selectedSymbol!,
+        SymbolOptions(geometry: coord, draggable: false, iconImage: 'node-box'),
+      );
+
+      //Move neighbouring nodes
+      moveNeighbouringNodes(selectedNode, gpxCoords);
+    });
+
     thr.throttle(() {
       final DragEventType type = eventType;
       switch (type) {
