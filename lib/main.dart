@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/material.dart';
 import 'package:geoxml/geoxml.dart';
@@ -7,6 +8,7 @@ import 'dart:io';
 import 'util.dart';
 import 'dart:convert' show utf8;
 import 'package:double_back_to_close/double_back_to_close.dart';
+import 'package:throttling/throttling.dart';
 
 void main() {
   runApp(MyApp());
@@ -88,6 +90,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Symbol? _selectedSymbol;
   int selectedNode = -1;
   String selectedNodeType = '';
+
+  final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
 
   var lineSegment;
   GeoXml? gpxOriginal;
@@ -258,78 +262,60 @@ class _MyHomePageState extends State<MyHomePage> {
       required origin,
       required point,
       required eventType}) {
-    final DragEventType type = eventType;
-    switch (type) {
-      case DragEventType.start:
-        break;
-      case DragEventType.drag:
-        gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
-        // While node is dragging, redraw gpx line and neighbouring virtual nodes
-        if (selectedNodeType == 'real') {}
-        updateTrackLine();
-        //Move neighbouring nodes
-        if (selectedNode > 0) {
-          LatLng latlon = halfSegmentSymbol(
-              gpxCoords[selectedNode - 1], gpxCoords[selectedNode]);
+    thr.throttle(() {
+      final DragEventType type = eventType;
+      switch (type) {
+        case DragEventType.start:
+          break;
+        case DragEventType.drag:
+          gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
+          // While node is dragging, redraw gpx line and neighbouring virtual nodes
+          if (selectedNodeType == 'real') {}
+          updateTrackLine();
+          moveNeighbouringNodes(selectedNode, gpxCoords);
+          break;
+        case DragEventType.end:
+          LatLng coord = LatLng(current.latitude, current.longitude);
+          gpxCoords[selectedNode] = coord;
+          realNodes[selectedNode] = coord;
+          Wpt dragged = rawGpx[selectedNode];
+          dragged.lat = coord.latitude;
+          dragged.lon = coord.longitude;
+
+          rawGpx[selectedNode] = dragged;
+
+          updateTrackLine();
           _updateSelectedSymbol(
-            neighbouringNodes[0]!,
+            _selectedSymbol!,
             SymbolOptions(
-                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+                geometry: coord, draggable: false, iconImage: 'node-box'),
           );
-        }
 
-        if (selectedNode < gpxCoords.length - 1) {
-          LatLng latlon = halfSegmentSymbol(
-              gpxCoords[selectedNode], gpxCoords[selectedNode + 1]);
-          _updateSelectedSymbol(
-            neighbouringNodes[1]!,
-            SymbolOptions(
-                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
-          );
-        }
-        break;
-      case DragEventType.end:
-        LatLng coord = LatLng(current.latitude, current.longitude);
-        gpxCoords[selectedNode] = coord;
-        realNodes[selectedNode] = coord;
-        Wpt dragged = rawGpx[selectedNode];
-        dragged.lat = coord.latitude;
-        dragged.lon = coord.longitude;
+          //Move neighbouring nodes
+          moveNeighbouringNodes(selectedNode, gpxCoords);
+          break;
+      }
+    });
+  }
 
-        rawGpx[selectedNode] = dragged;
+  void moveNeighbouringNodes(idx, coords) {
+    //Move neighbouring nodes
+    if (idx > 0) {
+      LatLng latlon = halfSegmentSymbol(coords[idx - 1], coords[idx]);
+      _updateSelectedSymbol(
+        neighbouringNodes[0]!,
+        SymbolOptions(
+            geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+      );
+    }
 
-        updateTrackLine();
-        _updateSelectedSymbol(
-          _selectedSymbol!,
-          SymbolOptions(
-              geometry: coord, draggable: false, iconImage: 'node-box'),
-        );
-
-        //Move neighbouring nodes
-        if (selectedNode > 0) {
-          LatLng latlon = halfSegmentSymbol(
-              gpxCoords[selectedNode - 1], gpxCoords[selectedNode]);
-          _updateSelectedSymbol(
-            neighbouringNodes[0]!,
-            SymbolOptions(
-                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
-          );
-        }
-
-        if (selectedNode < gpxCoords.length - 1) {
-          LatLng latlon = halfSegmentSymbol(
-              gpxCoords[selectedNode], gpxCoords[selectedNode + 1]);
-          _updateSelectedSymbol(
-            neighbouringNodes[1]!,
-            SymbolOptions(
-                geometry: latlon, draggable: false, iconImage: 'virtual-box'),
-          );
-        }
-
-        // removeSymbols();
-        // addSymbols();
-
-        break;
+    if (idx < gpxCoords.length - 1) {
+      LatLng latlon = halfSegmentSymbol(coords[idx], coords[idx + 1]);
+      _updateSelectedSymbol(
+        neighbouringNodes[1]!,
+        SymbolOptions(
+            geometry: latlon, draggable: false, iconImage: 'virtual-box'),
+      );
     }
   }
 
