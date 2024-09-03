@@ -10,9 +10,31 @@ Future<void> addImageFromAsset(
   return controller.addImage(name, list);
 }
 
-Wpt halfSegmentNode(Wpt first, Wpt last){
-  Wpt half = first;
-  half.ele = (first.ele! + last.ele!)  / 2;
+Wpt halfSegmentNode(Wpt first, Wpt last) {
+  Wpt half = Wpt(
+      lat: first.lat,
+      lon: first.lon,
+      ele: first.ele,
+      time: first.time,
+      magvar: first.magvar,
+      geoidheight: first.geoidheight,
+      name: first.name,
+      cmt: first.cmt,
+      desc: first.desc,
+      src: first.src,
+      links: first.links,
+      sym: first.sym,
+      type: first.type,
+      fix: first.fix,
+      sat: first.sat,
+      hdop: first.hdop,
+      vdop: first.vdop,
+      pdop: first.pdop,
+      ageofdgpsdata: first.ageofdgpsdata,
+      dgpsid: first.dgpsid,
+      extensions: first.extensions);
+
+  half.ele = (first.ele! + last.ele!) / 2;
   half.lat = (first.lat! + last.lat!) / 2;
   half.lon = (first.lon! + last.lon!) / 2;
 
