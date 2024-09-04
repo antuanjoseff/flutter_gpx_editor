@@ -10,7 +10,7 @@ Future<void> addImageFromAsset(
   return controller.addImage(name, list);
 }
 
-LatLng halfSegmentSymbol(LatLng first, LatLng last) {
+LatLng halfSegmentCoord(LatLng first, LatLng last) {
   return LatLng((first.latitude + last.latitude) / 2,
       (first.longitude + last.longitude) / 2);
 }
@@ -44,4 +44,29 @@ Wpt halfSegmentWpt(Wpt first, Wpt last) {
   half.lon = (first.lon! + last.lon!) / 2;
 
   return half;
+}
+
+Wpt cloneWpt(Wpt wpt) {
+  return Wpt(
+      lat: wpt.lat,
+      lon: wpt.lon,
+      ele: wpt.ele,
+      time: wpt.time,
+      magvar: wpt.magvar,
+      geoidheight: wpt.geoidheight,
+      name: wpt.name,
+      cmt: wpt.cmt,
+      desc: wpt.desc,
+      src: wpt.src,
+      links: wpt.links,
+      sym: wpt.sym,
+      type: wpt.type,
+      fix: wpt.fix,
+      sat: wpt.sat,
+      hdop: wpt.hdop,
+      vdop: wpt.vdop,
+      pdop: wpt.pdop,
+      ageofdgpsdata: wpt.ageofdgpsdata,
+      dgpsid: wpt.dgpsid,
+      extensions: wpt.extensions);
 }

@@ -41,12 +41,12 @@ class _MyAppState extends State<MyApp> {
         },
         // message: "Press back again to exit",
         child: const MyHomePage(title: 'GPX'),
-        onFirstBackPress: (context) {
-          // change this with your custom action
-          final snackBar = SnackBar(content: Text('Press back again to exit'));
-          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-          // ---
-        },
+        // onFirstBackPress: (context) {
+        //   // change this with your custom action
+        //   final snackBar = SnackBar(content: Text('Press back again to exit'));
+        //   ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        //   // ---
+        // },
         waitForSecondBackPress: 2, // default 2
         textStyle: const TextStyle(
           fontSize: 13,
@@ -87,7 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String? fileName;
   List<(int, Wpt, String)> edits = [];
   Circle? _selectedCircle;
-  Symbol? _selectedSymbol;
+  Symbol? selectedSymbol, previousSelectedSymbol;
   int selectedNode = -1;
   String selectedNodeType = '';
 
@@ -105,21 +105,30 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _onMapCreated(MapLibreMapController mapController) async {
     controller = mapController;
-    // controller!.onCircleTapped.add(_onCircleTapped);
     controller!.onSymbolTapped.add(_onSymbolTapped);
     controller!.onFeatureDrag.add(_onNodeDrag);
   }
 
-  void undoMove(idx, wpt) async {}
+  void undoMove(idx, wpt) async {
+    rawGpx[idx] = wpt;
+    LatLng latlon = LatLng(wpt.lat, wpt.lon);
+    gpxCoords[idx] = latlon;
+    updateTrackLine();
+    _updateSelectedSymbol(
+      realSymbols[idx]!,
+      SymbolOptions(draggable: false, iconImage: 'node-box', geometry: latlon),
+    );
+  }
 
   void undo() async {
     if (edits.isEmpty) return;
 
     var (idx, wpt, type) = edits.removeLast();
-
+    print('REMOVE LAST WPT FROM EDITS');
+    print('$idx    $type         $wpt');
     switch (type) {
       case 'moved':
-        // undoMove(idx, wpt);
+        undoMove(idx, wpt);
         break;
     }
   }
@@ -147,6 +156,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<(int, String)> searchSymbol(Symbol symbol) async {
+    print('INSIDE SEARCHSYMBOL');
     String type = 'real';
     var search = LatLng(symbol.toGeoJson()['geometry']['coordinates'][1],
         symbol.toGeoJson()['geometry']['coordinates'][0]);
@@ -174,7 +184,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     print(
-        'FOUND SYMBOL AT POSITION   ----------------------  $found ----------------  $type');
+        'FOUND SYMBOL AT POSITION   ----------------------  ${realNodes[found]} ');
     if (found != -1) {
       return (found, type);
     } else {
@@ -204,8 +214,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _updateSelectedSymbol(Symbol selected, SymbolOptions changes) async {
-    await controller!.updateSymbol(selected!, changes);
-    setState(() {});
+    await controller!.updateSymbol(selected, changes);
+    // setState(() {});
   }
 
   void updateTrackLine() async {
@@ -214,48 +224,62 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onSymbolTapped(Symbol symbol) async {
-    LatLng latlon = LatLng(
-      symbol.toGeoJson()['geometry']['coordinates'][0],
-      symbol.toGeoJson()['geometry']['coordinates'][1],
-    );
+    if (selectedNode != -1) {
+      selectedNode = -1;
+    }
 
-    print('TAPPED SYMBOL COORDINATES ---------------------------- $latlon');
+    if (selectedSymbol != null) {
+      _updateSelectedSymbol(
+        selectedSymbol!,
+        const SymbolOptions(draggable: false, iconImage: 'node-box'),
+      );
+    }
+
     var (selected, type) = await searchSymbol(symbol);
     selectedNode = selected;
     selectedNodeType = type;
-    _selectedSymbol = symbol;
+    selectedSymbol = symbol;
 
     // if realNode is being dragged, then get the two virtualNodes neighbouring the dragging realNode
     neighbouringNodes = [];
     if (type == 'real') {
       if (selectedNode == 0) {
         neighbouringNodes.add(null);
-      } else {
-        neighbouringNodes.add(virtualSymbols[selectedNode - 1]);
-      }
-      if (selectedNode == realNodes.length - 1) {
-        neighbouringNodes.add(null);
-      } else {
         neighbouringNodes.add(virtualSymbols[selectedNode]);
+      } else {
+        if (selectedNode == realNodes.length - 1) {
+          neighbouringNodes.add(virtualSymbols[selectedNode - 1]);
+          neighbouringNodes.add(null);
+        } else {
+          neighbouringNodes.add(virtualSymbols[selectedNode - 1]);
+          neighbouringNodes.add(virtualSymbols[selectedNode]);
+        }
       }
     }
 
+    for (var a = 0; a < neighbouringNodes.length; a++) {
+      _updateSelectedSymbol(
+        neighbouringNodes[a]!,
+        const SymbolOptions(iconImage: 'marker'),
+      );
+    }
     // if (type == 'virtual') {
     //   realNodes.insert(selectedNode, latlon);
     // }
 
-    var draggable = _selectedSymbol!.options.draggable;
+    var draggable = selectedSymbol!.options.draggable;
 
     draggable ??= false;
     draggable = !draggable;
+
     if (draggable) {
       _updateSelectedSymbol(
-        _selectedSymbol!,
+        selectedSymbol!,
         const SymbolOptions(draggable: true, iconImage: 'selected-box'),
       );
     } else {
       _updateSelectedSymbol(
-        _selectedSymbol!,
+        selectedSymbol!,
         const SymbolOptions(draggable: false, iconImage: 'node-box'),
       );
     }
@@ -280,7 +304,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       updateTrackLine();
       _updateSelectedSymbol(
-        _selectedSymbol!,
+        selectedSymbol!,
         SymbolOptions(geometry: coord, draggable: false, iconImage: 'node-box'),
       );
 
@@ -292,18 +316,27 @@ class _MyHomePageState extends State<MyHomePage> {
       final DragEventType type = eventType;
       switch (type) {
         case DragEventType.start:
+          if (selectedNodeType == 'real') {
+            edits.add((
+              selectedNode,
+              cloneWpt(rawGpx[selectedNode]),
+              'moved',
+            ));
+            print('edits add             ${edits[edits.length - 1]}');
+            setState(() {});
+          }
           break;
         case DragEventType.drag:
           gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
           // While node is dragging, redraw gpx line and neighbouring virtual nodes
-          if (selectedNodeType == 'real') {}
           updateTrackLine();
-          moveNeighbouringNodes(selectedNode, gpxCoords);
+          // moveNeighbouringNodes(selectedNode, gpxCoords);
           break;
         case DragEventType.end:
           LatLng coord = LatLng(current.latitude, current.longitude);
           gpxCoords[selectedNode] = coord;
           realNodes[selectedNode] = coord;
+
           Wpt dragged = rawGpx[selectedNode];
           dragged.lat = coord.latitude;
           dragged.lon = coord.longitude;
@@ -312,13 +345,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
           updateTrackLine();
           _updateSelectedSymbol(
-            _selectedSymbol!,
+            selectedSymbol!,
             SymbolOptions(
                 geometry: coord, draggable: false, iconImage: 'node-box'),
           );
 
           //Move neighbouring nodes
           moveNeighbouringNodes(selectedNode, gpxCoords);
+          selectedNode = -1;
           break;
       }
     });
@@ -327,7 +361,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void moveNeighbouringNodes(idx, coords) {
     //Move neighbouring nodes
     if (idx > 0) {
-      LatLng latlon = halfSegmentSymbol(coords[idx - 1], coords[idx]);
+      LatLng latlon = halfSegmentCoord(coords[idx - 1], coords[idx]);
       _updateSelectedSymbol(
         neighbouringNodes[0]!,
         SymbolOptions(
@@ -336,7 +370,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     if (idx < gpxCoords.length - 1) {
-      LatLng latlon = halfSegmentSymbol(coords[idx], coords[idx + 1]);
+      LatLng latlon = halfSegmentCoord(coords[idx], coords[idx + 1]);
       _updateSelectedSymbol(
         neighbouringNodes[1]!,
         SymbolOptions(
@@ -422,8 +456,9 @@ class _MyHomePageState extends State<MyHomePage> {
       gpxCoords.add(cur);
       realNodes.add(cur);
       rawGpx.add(trackSegment[i]);
+      rawGpx.add(trackSegment[i]);
 
-      virtualNodes.add(halfSegmentSymbol(cur, next));
+      virtualNodes.add(halfSegmentCoord(cur, next));
 
       //add a virtual node in the middle of each segment
       // Wpt halfNode = halfSegmentWpt(trackSegment[i], trackSegment[i + 1]);
@@ -434,12 +469,15 @@ class _MyHomePageState extends State<MyHomePage> {
       // gpxCoords.add(next);
     }
 
+    print('virtualNodes length              ${virtualNodes.length}');
+    print('realNodes length              ${realNodes.length}');
     //Last point. No mid node required
     int last = trackSegment.length - 1;
     cur = LatLng(trackSegment[last].lat, trackSegment[last].lon);
     bounds.expand(cur);
     gpxCoords.add(cur);
     rawGpx.add(trackSegment[last]);
+    realNodes.add(cur);
 
     mapLine = await controller!.addLine(
       LineOptions(
@@ -589,6 +627,8 @@ class _MyHomePageState extends State<MyHomePage> {
               controller!, "selected-box", "assets/symbols/selected-box.png");
           addImageFromAsset(
               controller!, "virtual-box", "assets/symbols/virtual-box.png");
+          addImageFromAsset(
+              controller!, "marker", "assets/symbols/custom-marker.png");
         },
         initialCameraPosition: const CameraPosition(
           target: LatLng(42.0, 3.0),
