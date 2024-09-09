@@ -72,22 +72,20 @@ class _MyHomePageState extends State<MyHomePage> {
   MapLibreMapController? controller;
   List<LatLng> gpxCoords = [];
   Line? mapLine;
-  List<Circle> mapCircles = [];
-  List<Symbol> realSymbols =
+  List<Symbol> mapSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
-  List<Symbol> virtualSymbols =
-      []; //Symbols on map to allow adding new NODES to the gpx track
-  List<Symbol?> neighbouringNodes = [];
+
   bool circlesVisible = false;
   List<CircleOptions> circleOptions = [];
   List<Wpt> rawGpx = [];
   List<LatLng> realNodes = [];
-  List<LatLng> virtualNodes = [];
+
   String? filename;
   String? fileName;
   List<(int, Wpt, String)> edits = [];
   Circle? _selectedCircle;
-  Symbol? selectedSymbol, previousSelectedSymbol;
+  Symbol? selectedSymbol;
+  Symbol? previousSelectedSymbol;
   int selectedNode = -1;
   String selectedNodeType = '';
 
@@ -109,13 +107,15 @@ class _MyHomePageState extends State<MyHomePage> {
     controller!.onFeatureDrag.add(_onNodeDrag);
   }
 
+  void _onMapClicked(LatLng point) {}
+
   void undoMove(idx, wpt) async {
     rawGpx[idx] = wpt;
     LatLng latlon = LatLng(wpt.lat, wpt.lon);
     gpxCoords[idx] = latlon;
     updateTrackLine();
     _updateSelectedSymbol(
-      realSymbols[idx]!,
+      mapSymbols[idx]!,
       SymbolOptions(draggable: false, iconImage: 'node-box', geometry: latlon),
     );
   }
@@ -124,8 +124,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if (edits.isEmpty) return;
 
     var (idx, wpt, type) = edits.removeLast();
-    print('REMOVE LAST WPT FROM EDITS');
-    print('$idx    $type         $wpt');
     switch (type) {
       case 'moved':
         undoMove(idx, wpt);
@@ -133,89 +131,23 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  int searchNode(Circle circle) {
-    var search = LatLng(circle.toGeoJson()['geometry']['coordinates'][1],
-        circle.toGeoJson()['geometry']['coordinates'][0]);
-    bool found = false;
-    int i = 0;
-
-    while (!found && i < realNodes.length) {
-      if (realNodes[i].latitude == search.latitude &&
-          realNodes[i].longitude == search.longitude) {
-        found = true;
-      } else {
-        i++;
+  Future<int> searchSymbol(String search) async {
+    for (var i = 0; i < mapSymbols.length; i++) {
+      if (mapSymbols[i].id == search) {
+        return i;
       }
     }
-
-    if (found) {
-      return i;
-    } else {
-      return -1;
-    }
+    return -1;
   }
-
-  Future<(int, String)> searchSymbol(Symbol symbol) async {
-    print('INSIDE SEARCHSYMBOL');
-    String type = 'real';
-    var search = LatLng(symbol.toGeoJson()['geometry']['coordinates'][1],
-        symbol.toGeoJson()['geometry']['coordinates'][0]);
-    int found = -1;
-    int i = 0;
-
-    while (found == -1 && i < realNodes.length) {
-      if (realNodes[i].latitude == search.latitude &&
-          realNodes[i].longitude == search.longitude) {
-        found = i;
-      } else {
-        i++;
-      }
-    }
-
-    i = 0;
-    while (found == -1 && i < virtualNodes.length) {
-      if (virtualNodes[i].latitude == search.latitude &&
-          virtualNodes[i].longitude == search.longitude) {
-        found = i;
-        type = 'virtual';
-      } else {
-        i++;
-      }
-    }
-
-    print(
-        'FOUND SYMBOL AT POSITION   ----------------------  ${realNodes[found]} ');
-    if (found != -1) {
-      return (found, type);
-    } else {
-      return (-1, '');
-    }
-  }
-
-  // void deleteCircle(String type, String id, Circle circle) async{
-
-  //   found = false;
-  //   i = 0;
-  //   // SAME WITH CIRCLES
-  //   while (!found && i < mapCircles.length) {
-  //     if (mapCircles[i].options.geometry!.latitude == search.latitude && mapCircles[i].options.geometry!.longitude == search.longitude ) {
-  //       found = true;
-  //       mapCircles.removeAt(i);
-  //       controller!.removeCircle(circle);
-  //     } else {
-  //       i++;
-  //     }
-  //   }
-  // }
 
   void _updateSelectedCircle(CircleOptions changes) {
     controller!.updateCircle(_selectedCircle!, changes);
     setState(() {});
   }
 
-  void _updateSelectedSymbol(Symbol selected, SymbolOptions changes) async {
-    await controller!.updateSymbol(selected, changes);
-    // setState(() {});
+  void _updateSelectedSymbol(Symbol symbol, SymbolOptions changes) async {
+    await controller!.updateSymbol(symbol, changes);
+    setState(() {});
   }
 
   void updateTrackLine() async {
@@ -223,63 +155,46 @@ class _MyHomePageState extends State<MyHomePage> {
     // setState(() {});
   }
 
-  void _onSymbolTapped(Symbol symbol) async {
-    if (selectedNode != -1) {
-      selectedNode = -1;
-    }
+  @override
+  void dispose() {
+    // controller?.onFillTapped.remove(_onFillTapped);
+    // controller?.onCircleTapped.remove(_onCircleTapped);
+    // controller?.onLineTapped.remove(_onLineTapped);
+    controller?.onSymbolTapped.remove(_onSymbolTapped);
+    super.dispose();
+  }
 
+  void _onSymbolTapped(Symbol symbol) async {
     if (selectedSymbol != null) {
       _updateSelectedSymbol(
         selectedSymbol!,
         const SymbolOptions(draggable: false, iconImage: 'node-box'),
       );
-    }
-
-    var (selected, type) = await searchSymbol(symbol);
-    selectedNode = selected;
-    selectedNodeType = type;
-    selectedSymbol = symbol;
-
-    // if realNode is being dragged, then get the two virtualNodes neighbouring the dragging realNode
-    neighbouringNodes = [];
-    if (type == 'real') {
-      if (selectedNode == 0) {
-        neighbouringNodes.add(null);
-        neighbouringNodes.add(virtualSymbols[selectedNode]);
-      } else {
-        if (selectedNode == realNodes.length - 1) {
-          neighbouringNodes.add(virtualSymbols[selectedNode - 1]);
-          neighbouringNodes.add(null);
-        } else {
-          neighbouringNodes.add(virtualSymbols[selectedNode - 1]);
-          neighbouringNodes.add(virtualSymbols[selectedNode]);
-        }
+      if (selectedSymbol!.id == symbol.id) {
+        selectedNode = -1;
+        selectedSymbol = null;
+        return;
       }
     }
 
-    for (var a = 0; a < neighbouringNodes.length; a++) {
-      _updateSelectedSymbol(
-        neighbouringNodes[a]!,
-        const SymbolOptions(iconImage: 'marker'),
-      );
-    }
-    // if (type == 'virtual') {
-    //   realNodes.insert(selectedNode, latlon);
-    // }
+    selectedSymbol = symbol;
+    Stopwatch stopwatch = new Stopwatch()..start();
+    selectedNode = await searchSymbol(symbol.id);
+    print('fount at ($selectedNode) executed in ${stopwatch.elapsed}');
 
-    var draggable = selectedSymbol!.options.draggable;
+    var draggable = symbol!.options.draggable;
 
     draggable ??= false;
     draggable = !draggable;
 
     if (draggable) {
       _updateSelectedSymbol(
-        selectedSymbol!,
+        symbol,
         const SymbolOptions(draggable: true, iconImage: 'selected-box'),
       );
     } else {
       _updateSelectedSymbol(
-        selectedSymbol!,
+        symbol,
         const SymbolOptions(draggable: false, iconImage: 'node-box'),
       );
     }
@@ -290,109 +205,39 @@ class _MyHomePageState extends State<MyHomePage> {
       required delta,
       required origin,
       required point,
-      required eventType}) {
-    deb.debounce(() {
-      print('DEBOUNCE .....................');
-      LatLng coord = LatLng(current.latitude, current.longitude);
-      gpxCoords[selectedNode] = coord;
-      realNodes[selectedNode] = coord;
-      Wpt dragged = rawGpx[selectedNode];
-      dragged.lat = coord.latitude;
-      dragged.lon = coord.longitude;
-
-      rawGpx[selectedNode] = dragged;
-
-      updateTrackLine();
-      _updateSelectedSymbol(
-        selectedSymbol!,
-        SymbolOptions(geometry: coord, draggable: false, iconImage: 'node-box'),
-      );
-
-      //Move neighbouring nodes
-      moveNeighbouringNodes(selectedNode, gpxCoords);
-    });
-
-    thr.throttle(() {
-      final DragEventType type = eventType;
-      switch (type) {
-        case DragEventType.start:
-          if (selectedNodeType == 'real') {
-            edits.add((
-              selectedNode,
-              cloneWpt(rawGpx[selectedNode]),
-              'moved',
-            ));
-            print('edits add             ${edits[edits.length - 1]}');
-            setState(() {});
-          }
-          break;
-        case DragEventType.drag:
+      required eventType}) async {
+    switch (eventType) {
+      case DragEventType.start:
+        selectedNode = await searchSymbol(id);
+        selectedSymbol = mapSymbols[selectedNode];
+        break;
+      case DragEventType.drag:
+        thr.throttle(() {
           gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
-          // While node is dragging, redraw gpx line and neighbouring virtual nodes
           updateTrackLine();
-          // moveNeighbouringNodes(selectedNode, gpxCoords);
-          break;
-        case DragEventType.end:
-          LatLng coord = LatLng(current.latitude, current.longitude);
-          gpxCoords[selectedNode] = coord;
-          realNodes[selectedNode] = coord;
+        });
+        break;
+      case DragEventType.end:
+        LatLng coord = LatLng(current.latitude, current.longitude);
+        gpxCoords[selectedNode] = coord;
+        realNodes[selectedNode] = coord;
 
-          Wpt dragged = rawGpx[selectedNode];
-          dragged.lat = coord.latitude;
-          dragged.lon = coord.longitude;
+        Wpt dragged = rawGpx[selectedNode];
+        dragged.lat = coord.latitude;
+        dragged.lon = coord.longitude;
 
-          rawGpx[selectedNode] = dragged;
+        rawGpx[selectedNode] = dragged;
 
-          updateTrackLine();
-          _updateSelectedSymbol(
-            selectedSymbol!,
-            SymbolOptions(
-                geometry: coord, draggable: false, iconImage: 'node-box'),
-          );
-
-          //Move neighbouring nodes
-          moveNeighbouringNodes(selectedNode, gpxCoords);
-          selectedNode = -1;
-          break;
-      }
-    });
-  }
-
-  void moveNeighbouringNodes(idx, coords) {
-    //Move neighbouring nodes
-    if (idx > 0) {
-      LatLng latlon = halfSegmentCoord(coords[idx - 1], coords[idx]);
-      _updateSelectedSymbol(
-        neighbouringNodes[0]!,
-        SymbolOptions(
-            geometry: latlon, draggable: false, iconImage: 'virtual-box'),
-      );
+        updateTrackLine();
+        _updateSelectedSymbol(
+          selectedSymbol!,
+          SymbolOptions(
+              geometry: coord, draggable: false, iconImage: 'node-box'),
+        );
+        selectedSymbol = null;
+        selectedNode = -1;
+        break;
     }
-
-    if (idx < gpxCoords.length - 1) {
-      LatLng latlon = halfSegmentCoord(coords[idx], coords[idx + 1]);
-      _updateSelectedSymbol(
-        neighbouringNodes[1]!,
-        SymbolOptions(
-            geometry: latlon, draggable: false, iconImage: 'virtual-box'),
-      );
-    }
-  }
-
-  void removeCircles() async {
-    await controller!.removeCircles(mapCircles);
-  }
-
-  void addCircles() async {
-    circleOptions = [];
-    for (var latLng in gpxCoords) {
-      circleOptions.add(CircleOptions(
-          geometry: latLng,
-          circleColor: "#00FF00",
-          circleRadius: 8,
-          draggable: false));
-    }
-    mapCircles = await controller!.addCircles(circleOptions);
   }
 
   List<SymbolOptions> makeSymbolOptions(nodes, symbolIcon) {
@@ -406,26 +251,18 @@ class _MyHomePageState extends State<MyHomePage> {
     return symbolOptions;
   }
 
-  void addRealSymbols() async {
-    realSymbols =
+  void addMapSymbols() async {
+    mapSymbols =
         await controller!.addSymbols(makeSymbolOptions(realNodes, 'node-box'));
   }
 
-  void addVirtualSymbols() async {
-    virtualSymbols = await controller!
-        .addSymbols(makeSymbolOptions(virtualNodes, 'virtual-box'));
-  }
-
   void addSymbols() async {
-    addRealSymbols();
-    addVirtualSymbols();
+    addMapSymbols();
   }
 
   void removeSymbols() async {
-    await controller!.removeSymbols(virtualSymbols);
-    await controller!.removeSymbols(realSymbols);
-    realSymbols = [];
-    virtualSymbols = [];
+    await controller!.removeSymbols(mapSymbols);
+    mapSymbols = [];
   }
 
   void resetSymbols() {
@@ -457,20 +294,8 @@ class _MyHomePageState extends State<MyHomePage> {
       realNodes.add(cur);
       rawGpx.add(trackSegment[i]);
       rawGpx.add(trackSegment[i]);
-
-      virtualNodes.add(halfSegmentCoord(cur, next));
-
-      //add a virtual node in the middle of each segment
-      // Wpt halfNode = halfSegmentWpt(trackSegment[i], trackSegment[i + 1]);
-      // rawGpx.add(
-      //   (halfNode, virtualNode),
-      // );
-      // next = LatLng(halfNode.lat!, halfNode.lon!);
-      // gpxCoords.add(next);
     }
 
-    print('virtualNodes length              ${virtualNodes.length}');
-    print('realNodes length              ${realNodes.length}');
     //Last point. No mid node required
     int last = trackSegment.length - 1;
     cur = LatLng(trackSegment[last].lat, trackSegment[last].lon);
@@ -491,8 +316,8 @@ class _MyHomePageState extends State<MyHomePage> {
     controller!.moveCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
-          southwest: bounds.southEast!,
-          northeast: bounds.northWest!,
+          southwest: bounds.southEast,
+          northeast: bounds.northWest,
         ),
         left: 10,
         top: 5,
@@ -538,7 +363,6 @@ class _MyHomePageState extends State<MyHomePage> {
                       circlesVisible = !circlesVisible;
                       if (circlesVisible) {
                         addSymbols();
-                        // addCircles();
                       } else {
                         removeSymbols();
                       }
@@ -599,9 +423,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                 setState(() {
                   realNodes = [];
-                  virtualNodes = [];
-                  realSymbols = [];
-                  virtualSymbols = [];
+                  mapSymbols = [];
                   gpxCoords = [];
                   rawGpx = [];
 
@@ -620,6 +442,16 @@ class _MyHomePageState extends State<MyHomePage> {
         compassEnabled: false,
         // myLocationEnabled: true,
         trackCameraPosition: true,
+        onMapClick: (point, latLng) async {
+          if (selectedSymbol != null) {
+            _updateSelectedSymbol(
+              selectedSymbol!,
+              const SymbolOptions(draggable: false, iconImage: 'node-box'),
+            );
+            selectedSymbol = null;
+            selectedNode = -1;
+          }
+        },
         onMapCreated: _onMapCreated,
         onStyleLoadedCallback: () {
           addImageFromAsset(controller!, "node-box", "assets/symbols/box.png");
