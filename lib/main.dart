@@ -75,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Symbol> mapSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
 
-  bool circlesVisible = false;
+  bool editMode = false;
   List<CircleOptions> circleOptions = [];
   List<Wpt> rawGpx = [];
   List<LatLng> realNodes = [];
@@ -106,8 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
     controller!.onSymbolTapped.add(_onSymbolTapped);
     controller!.onFeatureDrag.add(_onNodeDrag);
   }
-
-  void _onMapClicked(LatLng point) {}
 
   void undoMove(idx, wpt) async {
     rawGpx[idx] = wpt;
@@ -178,9 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     selectedSymbol = symbol;
-    Stopwatch stopwatch = new Stopwatch()..start();
     selectedNode = await searchSymbol(symbol.id);
-    print('fount at ($selectedNode) executed in ${stopwatch.elapsed}');
 
     var draggable = symbol!.options.draggable;
 
@@ -245,7 +241,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
-      symbolOptions.add(SymbolOptions(iconImage: symbolIcon, geometry: coord));
+      symbolOptions.add(SymbolOptions(
+          iconImage: symbolIcon, geometry: coord, textAnchor: idx.toString()));
     }
 
     return symbolOptions;
@@ -274,14 +271,6 @@ class _MyHomePageState extends State<MyHomePage> {
     LatLng cur;
     LatLng next;
 
-    if (mapLine != null) {
-      controller!.removeLine(mapLine!);
-      if (circlesVisible) {
-        circlesVisible = false;
-        removeSymbols();
-      }
-    }
-
     Bounds bounds = Bounds(
         LatLng(trackSegment.first.lat, trackSegment.first.lon),
         LatLng(trackSegment.first.lat, trackSegment.first.lon));
@@ -292,7 +281,6 @@ class _MyHomePageState extends State<MyHomePage> {
       bounds.expand(cur);
       gpxCoords.add(cur);
       realNodes.add(cur);
-      rawGpx.add(trackSegment[i]);
       rawGpx.add(trackSegment[i]);
     }
 
@@ -330,11 +318,20 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  // Uint8List convertStringToUint8List(String str) {
-  //   final List<int> codeUnits = str.codeUnits;
-  //   final Uint8List unit8List = Uint8List.fromList(codeUnits);
-  //   return unit8List;
-  // }
+  void cleanScreen() {
+    if (mapLine != null) {
+      controller!.removeLine(mapLine!);
+      if (editMode) {
+        editMode = false;
+        removeSymbols();
+      }
+    }
+    editMode = false;
+    realNodes = [];
+    mapSymbols = [];
+    gpxCoords = [];
+    rawGpx = [];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,8 +357,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     icon: const Icon(Icons.edit),
                     tooltip: 'Show Snackbar',
                     onPressed: () async {
-                      circlesVisible = !circlesVisible;
-                      if (circlesVisible) {
+                      editMode = !editMode;
+                      if (editMode) {
                         addSymbols();
                       } else {
                         removeSymbols();
@@ -422,11 +419,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 gpxOriginal = await GeoXml.fromGpxString(stream);
 
                 setState(() {
-                  realNodes = [];
-                  mapSymbols = [];
-                  gpxCoords = [];
-                  rawGpx = [];
-
+                  cleanScreen();
                   // get only first track segment
                   lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
                   addLine(lineSegment);
@@ -442,7 +435,8 @@ class _MyHomePageState extends State<MyHomePage> {
         compassEnabled: false,
         // myLocationEnabled: true,
         trackCameraPosition: true,
-        onMapClick: (point, latLng) async {
+        onMapClick: (point, clickedPoint) async {
+          if (gpxCoords.isEmpty || !editMode) return;
           if (selectedSymbol != null) {
             _updateSelectedSymbol(
               selectedSymbol!,
@@ -451,6 +445,33 @@ class _MyHomePageState extends State<MyHomePage> {
             selectedSymbol = null;
             selectedNode = -1;
           }
+          Stopwatch stopwatch = new Stopwatch()..start();
+          int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
+          print('Closest at ($segment) executed in ${stopwatch.elapsed}');
+          LatLng P = projectionPoint(
+              gpxCoords[segment], gpxCoords[segment + 1], clickedPoint);
+
+          Symbol added = await controller!.addSymbol(SymbolOptions(
+              draggable: false, iconImage: 'node-box', geometry: P));
+
+          mapSymbols.insert(segment + 1, added);
+
+          gpxCoords.insert(segment + 1, P);
+          Wpt newWpt =
+              cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
+          newWpt.lat = P.latitude;
+          newWpt.lon = P.longitude;
+          rawGpx.insert(segment + 1, newWpt);
+
+          updateTrackLine();
+          // mapLine = await controller!.addLine(
+          //   LineOptions(
+          //     geometry: [gpxCoords[segment], gpxCoords[segment + 1]],
+          //     lineColor: "#00ff00",
+          //     lineWidth: 2.5,
+          //     lineOpacity: 0.9,
+          //   ),
+          // );
         },
         onMapCreated: _onMapCreated,
         onStyleLoadedCallback: () {
