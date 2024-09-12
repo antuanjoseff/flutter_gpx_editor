@@ -158,3 +158,7 @@ LatLng projectionPoint(LatLng X, LatLng Y, LatLng P) {
 
   return LatLng(intersectionY, intersectionX);
 }
+
+double distanceBetweenLocations(LatLng origin, LatLng target){
+  return cos(sin(origin.latitude)*sin(target.latitude)+cos(origin.latitude)*cos(target.latitude)*cos(target.longitude-origin.longitude))*6371; 
+}

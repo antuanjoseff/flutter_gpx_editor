@@ -89,8 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
   int selectedNode = -1;
   String selectedNodeType = '';
 
-  final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
+  // final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
+  // final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
   var lineSegment;
   GeoXml? gpxOriginal;
@@ -448,8 +448,12 @@ class _MyHomePageState extends State<MyHomePage> {
           Stopwatch stopwatch = new Stopwatch()..start();
           int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
           print('Closest at ($segment) executed in ${stopwatch.elapsed}');
+
+          print('...................DISTANCE (meters?)');
           LatLng P = projectionPoint(
               gpxCoords[segment], gpxCoords[segment + 1], clickedPoint);
+
+          print(distanceBetweenLocations(clickedPoint, P));
 
           Symbol added = await controller!.addSymbol(SymbolOptions(
               draggable: false, iconImage: 'node-box', geometry: P));
