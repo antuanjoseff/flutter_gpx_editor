@@ -89,8 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
   int selectedNode = -1;
   String selectedNodeType = '';
 
-  // final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
-  // final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
+  final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
   var lineSegment;
   GeoXml? gpxOriginal;
@@ -295,8 +295,8 @@ class _MyHomePageState extends State<MyHomePage> {
     mapLine = await controller!.addLine(
       LineOptions(
         geometry: gpxCoords,
-        lineColor: "#ff0000",
-        lineWidth: 1.5,
+        lineColor: "#ffa500",
+        lineWidth: 2.5,
         lineOpacity: 0.9,
       ),
     );
@@ -449,33 +449,26 @@ class _MyHomePageState extends State<MyHomePage> {
           int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
           print('Closest at ($segment) executed in ${stopwatch.elapsed}');
 
-          print('...................DISTANCE (meters?)');
           LatLng P = projectionPoint(
               gpxCoords[segment], gpxCoords[segment + 1], clickedPoint);
 
-          print(distanceBetweenLocations(clickedPoint, P));
+          double dist = getDistanceFromLatLonInMeters(clickedPoint, P);
+          print('....................$dist');
+          if (dist < 20) {
+            Symbol added = await controller!.addSymbol(SymbolOptions(
+                draggable: false, iconImage: 'node-box', geometry: P));
 
-          Symbol added = await controller!.addSymbol(SymbolOptions(
-              draggable: false, iconImage: 'node-box', geometry: P));
+            mapSymbols.insert(segment + 1, added);
 
-          mapSymbols.insert(segment + 1, added);
+            gpxCoords.insert(segment + 1, P);
+            Wpt newWpt =
+                cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
+            newWpt.lat = P.latitude;
+            newWpt.lon = P.longitude;
+            rawGpx.insert(segment + 1, newWpt);
 
-          gpxCoords.insert(segment + 1, P);
-          Wpt newWpt =
-              cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
-          newWpt.lat = P.latitude;
-          newWpt.lon = P.longitude;
-          rawGpx.insert(segment + 1, newWpt);
-
-          updateTrackLine();
-          // mapLine = await controller!.addLine(
-          //   LineOptions(
-          //     geometry: [gpxCoords[segment], gpxCoords[segment + 1]],
-          //     lineColor: "#00ff00",
-          //     lineWidth: 2.5,
-          //     lineOpacity: 0.9,
-          //   ),
-          // );
+            updateTrackLine();
+          }
         },
         onMapCreated: _onMapCreated,
         onStyleLoadedCallback: () {

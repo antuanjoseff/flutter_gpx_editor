@@ -159,6 +159,26 @@ LatLng projectionPoint(LatLng X, LatLng Y, LatLng P) {
   return LatLng(intersectionY, intersectionX);
 }
 
-double distanceBetweenLocations(LatLng origin, LatLng target){
-  return cos(sin(origin.latitude)*sin(target.latitude)+cos(origin.latitude)*cos(target.latitude)*cos(target.longitude-origin.longitude))*6371; 
+double deg2rad(double deg) {
+  return deg / 180.0 * pi;
+}
+
+
+double getDistanceFromLatLonInMeters(LatLng origin, LatLng target) {
+  double lat1 = origin.latitude;
+  double lat2 = target.latitude;
+  double lon1 = origin.longitude;
+  double lon2 = target.longitude;
+
+  int R = 6371; // Radius of the earth in km
+  double dLat = deg2rad(lat2-lat1);  // deg2rad below
+  double dLon = deg2rad(lon2-lon1); 
+  double a = 
+    sin(dLat/2) * sin(dLat/2) +
+    cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * 
+    sin(dLon/2) * sin(dLon/2)
+    ; 
+  double c = 2 * atan2(sqrt(a), sqrt(1-a)); 
+  double d = R * c; // Distance in km
+  return d * 1000; //distance in meters
 }
