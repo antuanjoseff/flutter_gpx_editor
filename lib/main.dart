@@ -138,11 +138,6 @@ class _MyHomePageState extends State<MyHomePage> {
     return -1;
   }
 
-  void _updateSelectedCircle(CircleOptions changes) {
-    controller!.updateCircle(_selectedCircle!, changes);
-    setState(() {});
-  }
-
   void _updateSelectedSymbol(Symbol symbol, SymbolOptions changes) async {
     await controller!.updateSymbol(symbol, changes);
     setState(() {});
@@ -163,37 +158,57 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onSymbolTapped(Symbol symbol) async {
-    if (selectedSymbol != null) {
-      _updateSelectedSymbol(
-        selectedSymbol!,
-        const SymbolOptions(draggable: false, iconImage: 'node-box'),
-      );
-      if (selectedSymbol!.id == symbol.id) {
-        selectedNode = -1;
-        selectedSymbol = null;
+    thr.throttle(() async{
+      print('ON SYMBOL TAPPED');
+      if (selectedSymbol != null) {
+        print('DEACTIVATE.......selectedNode....$selectedNode');
+        
+        String symbolId = await deactivateSymbol(selectedSymbol!, selectedNode);
+        if (symbolId != symbol.id) {
+          print('SELECTED ANOTHER SYMBOL DIFFERENT FROM PREVIOUSLY SELECTED ONE');
+          selectedSymbol = symbol;
+          selectedNode = await searchSymbol(symbol.id);
+          print('SELECTED NODE $selectedNode');
+          await activateSymbol(selectedSymbol!, selectedNode);       
+        }
         return;
-      }
+      } 
+
+      selectedSymbol = symbol;
+      selectedNode = await searchSymbol(symbol.id);
+      print('ACTIVATE.......selectedNode....$selectedNode');
+
+      activateSymbol(selectedSymbol!, selectedNode);              
+    });
+         
+  
+  }
+
+  Future<String> activateSymbol(Symbol symbol, int idx) async{
+    print('ACTIVATE SYMBOL');
+    await redrawSymbol(symbol, idx, 'activate');
+    return symbol.id;
+  }
+
+  Future<String> deactivateSymbol(Symbol symbol, int idx) async {
+    print('DEACTIVATE SYMBOL ${symbol.id}');
+    await redrawSymbol(symbol, idx, 'deactivate');
+    return symbol.id;
+  }
+
+  Future<void> redrawSymbol(Symbol symbol, int idx, String mode) async{
+    String image = 'node-box';
+    bool draggable = false;
+    if (mode == 'activate') {
+      image = 'selected-box';
+      draggable = true;
     }
-
-    selectedSymbol = symbol;
-    selectedNode = await searchSymbol(symbol.id);
-
-    var draggable = symbol!.options.draggable;
-
-    draggable ??= false;
-    draggable = !draggable;
-
-    if (draggable) {
-      _updateSelectedSymbol(
-        symbol,
-        const SymbolOptions(draggable: true, iconImage: 'selected-box'),
-      );
-    } else {
-      _updateSelectedSymbol(
-        symbol,
-        const SymbolOptions(draggable: false, iconImage: 'node-box'),
-      );
-    }
+    LatLng coords = LatLng(symbol.options.geometry!.latitude, symbol.options.geometry!.longitude);
+    _updateSelectedSymbol(
+      selectedSymbol!,
+      SymbolOptions(
+          geometry: coords, draggable: draggable, iconImage: image),
+    );
   }
 
   void _onNodeDrag(id,
@@ -202,9 +217,11 @@ class _MyHomePageState extends State<MyHomePage> {
       required origin,
       required point,
       required eventType}) async {
+    if (selectedNode == -1) return; 
     switch (eventType) {
       case DragEventType.start:
         selectedNode = await searchSymbol(id);
+        print('.............SELECTED NODE         $selectedNode');
         selectedSymbol = mapSymbols[selectedNode];
         break;
       case DragEventType.drag:
@@ -436,14 +453,12 @@ class _MyHomePageState extends State<MyHomePage> {
         // myLocationEnabled: true,
         trackCameraPosition: true,
         onMapClick: (point, clickedPoint) async {
+          print('ON MAP CLICKED');
           if (gpxCoords.isEmpty || !editMode) return;
+          print('.....................$selectedSymbol');
           if (selectedSymbol != null) {
-            _updateSelectedSymbol(
-              selectedSymbol!,
-              const SymbolOptions(draggable: false, iconImage: 'node-box'),
-            );
-            selectedSymbol = null;
-            selectedNode = -1;
+            deactivateSymbol(selectedSymbol!, selectedNode);
+            print('...............RESET SYMBOL');
           }
           Stopwatch stopwatch = new Stopwatch()..start();
           int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
@@ -454,21 +469,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
           double dist = getDistanceFromLatLonInMeters(clickedPoint, P);
           print('....................$dist');
-          if (dist < 20) {
-            Symbol added = await controller!.addSymbol(SymbolOptions(
-                draggable: false, iconImage: 'node-box', geometry: P));
+          // if (dist < 20) {
+          //   Symbol added = await controller!.addSymbol(SymbolOptions(
+          //       draggable: false, iconImage: 'node-box', geometry: P));
 
-            mapSymbols.insert(segment + 1, added);
+          //   mapSymbols.insert(segment + 1, added);
 
-            gpxCoords.insert(segment + 1, P);
-            Wpt newWpt =
-                cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
-            newWpt.lat = P.latitude;
-            newWpt.lon = P.longitude;
-            rawGpx.insert(segment + 1, newWpt);
+          //   gpxCoords.insert(segment + 1, P);
+          //   Wpt newWpt =
+          //       cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
+          //   newWpt.lat = P.latitude;
+          //   newWpt.lon = P.longitude;
+          //   rawGpx.insert(segment + 1, newWpt);
 
-            updateTrackLine();
-          }
+          //   updateTrackLine();
+          // }
         },
         onMapCreated: _onMapCreated,
         onStyleLoadedCallback: () {
