@@ -83,7 +83,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String? filename;
   String? fileName;
   List<(int, Wpt, String)> edits = [];
-  Circle? _selectedCircle;
+
   Symbol? selectedSymbol;
   Symbol? previousSelectedSymbol;
   int selectedNode = -1;
@@ -110,6 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void undoMove(idx, wpt) async {
     rawGpx[idx] = wpt;
     LatLng latlon = LatLng(wpt.lat, wpt.lon);
+    print('UNDO MOVE..........$latlon........$idx..');
     gpxCoords[idx] = latlon;
     updateTrackLine();
     _updateSelectedSymbol(
@@ -160,6 +161,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onSymbolTapped(Symbol symbol) async {
     thr.throttle(() async{
       print('ON SYMBOL TAPPED');
+      print(selectedSymbol);
       if (selectedSymbol != null) {
         print('DEACTIVATE.......selectedNode....$selectedNode');
         
@@ -171,6 +173,7 @@ class _MyHomePageState extends State<MyHomePage> {
           print('SELECTED NODE $selectedNode');
           await activateSymbol(selectedSymbol!, selectedNode);       
         }
+        selectedSymbol = null;
         return;
       } 
 
@@ -220,9 +223,10 @@ class _MyHomePageState extends State<MyHomePage> {
     if (selectedNode == -1) return; 
     switch (eventType) {
       case DragEventType.start:
+        print('...............DRAG START ${rawGpx[selectedNode]}');
         selectedNode = await searchSymbol(id);
-        print('.............SELECTED NODE         $selectedNode');
         selectedSymbol = mapSymbols[selectedNode];
+        edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'moved'));
         break;
       case DragEventType.drag:
         thr.throttle(() {
@@ -238,7 +242,7 @@ class _MyHomePageState extends State<MyHomePage> {
         Wpt dragged = rawGpx[selectedNode];
         dragged.lat = coord.latitude;
         dragged.lon = coord.longitude;
-
+        print('drag end ................$coord');
         rawGpx[selectedNode] = dragged;
 
         updateTrackLine();
@@ -247,8 +251,10 @@ class _MyHomePageState extends State<MyHomePage> {
           SymbolOptions(
               geometry: coord, draggable: false, iconImage: 'node-box'),
         );
+
         selectedSymbol = null;
         selectedNode = -1;
+
         break;
     }
   }
@@ -348,6 +354,7 @@ class _MyHomePageState extends State<MyHomePage> {
     mapSymbols = [];
     gpxCoords = [];
     rawGpx = [];
+    edits = [];
   }
 
   @override
@@ -448,60 +455,73 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      body: MapLibreMap(
-        compassEnabled: false,
-        // myLocationEnabled: true,
-        trackCameraPosition: true,
-        onMapClick: (point, clickedPoint) async {
-          print('ON MAP CLICKED');
-          if (gpxCoords.isEmpty || !editMode) return;
-          print('.....................$selectedSymbol');
-          if (selectedSymbol != null) {
-            deactivateSymbol(selectedSymbol!, selectedNode);
-            print('...............RESET SYMBOL');
-          }
-          Stopwatch stopwatch = new Stopwatch()..start();
-          int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
-          print('Closest at ($segment) executed in ${stopwatch.elapsed}');
-
-          LatLng P = projectionPoint(
-              gpxCoords[segment], gpxCoords[segment + 1], clickedPoint);
-
-          double dist = getDistanceFromLatLonInMeters(clickedPoint, P);
-          print('....................$dist');
-          // if (dist < 20) {
-          //   Symbol added = await controller!.addSymbol(SymbolOptions(
-          //       draggable: false, iconImage: 'node-box', geometry: P));
-
-          //   mapSymbols.insert(segment + 1, added);
-
-          //   gpxCoords.insert(segment + 1, P);
-          //   Wpt newWpt =
-          //       cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
-          //   newWpt.lat = P.latitude;
-          //   newWpt.lon = P.longitude;
-          //   rawGpx.insert(segment + 1, newWpt);
-
-          //   updateTrackLine();
-          // }
-        },
-        onMapCreated: _onMapCreated,
-        onStyleLoadedCallback: () {
-          addImageFromAsset(controller!, "node-box", "assets/symbols/box.png");
-          addImageFromAsset(
-              controller!, "selected-box", "assets/symbols/selected-box.png");
-          addImageFromAsset(
-              controller!, "virtual-box", "assets/symbols/virtual-box.png");
-          addImageFromAsset(
-              controller!, "marker", "assets/symbols/custom-marker.png");
-        },
-        initialCameraPosition: const CameraPosition(
-          target: LatLng(42.0, 3.0),
-          zoom: 13.0,
-        ),
-        styleString:
-            // 'https://geoserveis.icgc.cat/contextmaps/icgc_mapa_base_gris_simplificat.json',
-            'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
+      body: Stack(
+        children: [
+          MapLibreMap(
+            compassEnabled: false,
+            // myLocationEnabled: true,
+            trackCameraPosition: true,
+            onMapClick: (point, clickedPoint) async {
+              print('ON MAP CLICKED');
+              if (gpxCoords.isEmpty || !editMode) return;
+              print('.....................$selectedSymbol');
+              if (selectedSymbol != null) {
+                deactivateSymbol(selectedSymbol!, selectedNode);
+                print('...............RESET SYMBOL');
+              }
+              Stopwatch stopwatch = new Stopwatch()..start();
+              int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
+              print('Closest at ($segment) executed in ${stopwatch.elapsed}');
+          
+              LatLng P = projectionPoint(
+                  gpxCoords[segment], gpxCoords[segment + 1], clickedPoint);
+          
+              double dist = getDistanceFromLatLonInMeters(clickedPoint, P);
+              print('....................$dist');
+              // if (dist < 20) {
+              //   Symbol added = await controller!.addSymbol(SymbolOptions(
+              //       draggable: false, iconImage: 'node-box', geometry: P));
+          
+              //   mapSymbols.insert(segment + 1, added);
+          
+              //   gpxCoords.insert(segment + 1, P);
+              //   Wpt newWpt =
+              //       cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
+              //   newWpt.lat = P.latitude;
+              //   newWpt.lon = P.longitude;
+              //   rawGpx.insert(segment + 1, newWpt);
+          
+              //   updateTrackLine();
+              // }
+            },
+            onMapCreated: _onMapCreated,
+            onStyleLoadedCallback: () {
+              addImageFromAsset(controller!, "node-box", "assets/symbols/box.png");
+              addImageFromAsset(
+                  controller!, "selected-box", "assets/symbols/selected-box.png");
+              addImageFromAsset(
+                  controller!, "virtual-box", "assets/symbols/virtual-box.png");
+              addImageFromAsset(
+                  controller!, "marker", "assets/symbols/custom-marker.png");
+            },
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(42.0, 3.0),
+              zoom: 13.0,
+            ),
+            styleString:
+                // 'https://geoserveis.icgc.cat/contextmaps/icgc_mapa_base_gris_simplificat.json',
+                'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
+          ),
+          const Positioned(
+            right: 15,
+            top: 15,
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              radius: 16,
+              child:  Icon(Icons.delete, color: Colors.red, size: 20,),
+            ),
+          ),
+        ]
       ),
     );
   }
