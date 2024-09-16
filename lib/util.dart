@@ -3,6 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
 import 'dart:math';
 import 'dart:core';
+import 'dart:async';
 
 /// Adds an asset image to the currently displayed style
 Future<void> addImageFromAsset(
@@ -181,4 +182,9 @@ double getDistanceFromLatLonInMeters(LatLng origin, LatLng target) {
   double c = 2 * atan2(sqrt(a), sqrt(1-a)); 
   double d = R * c; // Distance in km
   return d * 1000; //distance in meters
+}
+
+setTimeout(callback, time) {
+  Duration timeDelay = Duration(milliseconds: time);
+  return Timer(timeDelay, callback);
 }

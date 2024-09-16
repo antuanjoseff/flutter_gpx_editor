@@ -107,6 +107,32 @@ class _MyHomePageState extends State<MyHomePage> {
     controller!.onFeatureDrag.add(_onNodeDrag);
   }
 
+  void deleteNode() async {
+    if (selectedNode == -1) return;
+    edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'delete'));
+    realNodes.removeAt(selectedNode);
+    gpxCoords.removeAt(selectedNode);
+    rawGpx.removeAt(selectedNode);
+    await controller!.removeSymbol(mapSymbols[selectedNode]);
+    mapSymbols.removeAt(selectedNode);
+    updateTrackLine();
+    selectedNode = -1;
+    selectedSymbol = null;
+    setState(() {
+      
+    });
+  }
+
+  void undoDelete(idx, wpt) async {
+    rawGpx.insert(idx, wpt);
+    
+    LatLng latlon = LatLng(wpt.lat, wpt.lon);
+    gpxCoords.insert(idx, latlon);
+    realNodes.insert(idx, latlon);
+    updateTrackLine();
+    resetSymbols();
+  }
+
   void undoMove(idx, wpt) async {
     rawGpx[idx] = wpt;
     LatLng latlon = LatLng(wpt.lat, wpt.lon);
@@ -120,12 +146,21 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void undo() async {
-    if (edits.isEmpty) return;
+    if (edits.isEmpty) {
+      return;
+    }
 
     var (idx, wpt, type) = edits.removeLast();
+    if (edits.isEmpty) {
+            setState(() {        
+      });
+    }
     switch (type) {
       case 'moved':
         undoMove(idx, wpt);
+        break;
+      case 'delete':
+        undoDelete(idx, wpt);
         break;
     }
   }
@@ -171,9 +206,11 @@ class _MyHomePageState extends State<MyHomePage> {
           selectedSymbol = symbol;
           selectedNode = await searchSymbol(symbol.id);
           print('SELECTED NODE $selectedNode');
-          await activateSymbol(selectedSymbol!, selectedNode);       
-        }
-        selectedSymbol = null;
+          await activateSymbol(selectedSymbol!, selectedNode);          
+        } else {
+          await deactivateSymbol(selectedSymbol!, selectedNode);          
+        }        
+        setState(() {});
         return;
       } 
 
@@ -196,6 +233,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<String> deactivateSymbol(Symbol symbol, int idx) async {
     print('DEACTIVATE SYMBOL ${symbol.id}');
     await redrawSymbol(symbol, idx, 'deactivate');
+    selectedSymbol = null;
     return symbol.id;
   }
 
@@ -206,12 +244,30 @@ class _MyHomePageState extends State<MyHomePage> {
       image = 'selected-box';
       draggable = true;
     }
+
     LatLng coords = LatLng(symbol.options.geometry!.latitude, symbol.options.geometry!.longitude);
+    
+    // Change icon, then wait and change draggable prop
     _updateSelectedSymbol(
       selectedSymbol!,
       SymbolOptions(
-          geometry: coords, draggable: draggable, iconImage: image),
+          geometry: coords, iconImage: image, draggable: draggable),
     );
+
+    setState(() {});
+    // int time = 0;
+    // if (draggable) {
+    //  time = 250; 
+    // }
+
+    // setTimeout((){
+    //   if (selectedSymbol==null) return;
+    //   _updateSelectedSymbol(
+    //     selectedSymbol!,
+    //     SymbolOptions(
+    //       draggable: draggable),
+    //   );
+    // }, time) ;
   }
 
   void _onNodeDrag(id,
@@ -242,7 +298,6 @@ class _MyHomePageState extends State<MyHomePage> {
         Wpt dragged = rawGpx[selectedNode];
         dragged.lat = coord.latitude;
         dragged.lon = coord.longitude;
-        print('drag end ................$coord');
         rawGpx[selectedNode] = dragged;
 
         updateTrackLine();
@@ -252,9 +307,9 @@ class _MyHomePageState extends State<MyHomePage> {
               geometry: coord, draggable: false, iconImage: 'node-box'),
         );
 
-        selectedSymbol = null;
+        await deactivateSymbol(selectedSymbol!, selectedNode);        
         selectedNode = -1;
-
+        setState(() {});
         break;
     }
   }
@@ -512,15 +567,22 @@ class _MyHomePageState extends State<MyHomePage> {
                 // 'https://geoserveis.icgc.cat/contextmaps/icgc_mapa_base_gris_simplificat.json',
                 'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
           ),
-          const Positioned(
-            right: 15,
-            top: 15,
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              radius: 16,
-              child:  Icon(Icons.delete, color: Colors.red, size: 20,),
-            ),
-          ),
+           ...[
+            selectedSymbol != null ?
+              Positioned(
+                right: 15,
+                top: 15,
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  
+                  child:  IconButton(
+                    onPressed: () {
+                      deleteNode();
+                    }, 
+                    icon: const Icon(Icons.delete, color: Colors.red,)
+                  ),
+                ),
+              ) : Container()],
         ]
       ),
     );
