@@ -1,3 +1,3 @@
 class Controller {
-  void Function()? doSomething;
+  void Function(int i)? doSomething;
 }

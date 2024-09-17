@@ -37,8 +37,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.initState();
   }
 
-  void doSomething() {
-    print('--- --------- ------ GETTING THERE?');
+  void doSomething(int i) {
+    print('--- ---------$i ------DO SOMETHING FUNCTION');
   }
 
   _MyMaplibreState(Controller controller) {
