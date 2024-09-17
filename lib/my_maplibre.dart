@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
-import 'controller.dart';
+// import 'controller.dart';
 
-class HolaMapa extends StatefulWidget {
-  final Controller controller;
-  const HolaMapa({
-    Key? key,
-    required this.controller,
-  }) : super(key: key);
+class MyMapLibre extends StatefulWidget {
+  const MyMapLibre({Key? key}) : super(key: key);
 
   @override
-  State<HolaMapa> createState() => _MyMaplibreState(controller);
+  State<MyMapLibre> createState() => MyMaplibreState();
 }
 
-class _MyMaplibreState extends State<HolaMapa> {
+class MyMaplibreState extends State<MyMapLibre> {
   MapLibreMapController? mapController;
   List<LatLng> gpxCoords = [];
   Line? mapLine;
@@ -39,10 +35,6 @@ class _MyMaplibreState extends State<HolaMapa> {
 
   void doSomething() {
     print('--- --------- ------ GETTING THERE?');
-  }
-
-  _MyMaplibreState(Controller _controller) {
-    _controller.doSomething = doSomething;
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {

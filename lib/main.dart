@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 import 'package:gpx_editor/my_maplibre.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/material.dart';
@@ -7,13 +8,15 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:convert' show utf8;
 import 'package:double_back_to_close/double_back_to_close.dart';
-import 'controller.dart';
+// import 'controller.dart';
 
 void main() {
   runApp(MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  MyApp({Key? key}) : super(key: key);
+
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -38,14 +41,6 @@ class _MyAppState extends State<MyApp> {
             allowClose = true;
           });
         },
-        // message: "Press back again to exit",
-        child: MyHomePage(),
-        // onFirstBackPress: (context) {
-        //   // change this with your custom action
-        //   final snackBar = SnackBar(content: Text('Press back again to exit'));
-        //   ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        //   // ---
-        // },
         waitForSecondBackPress: 2, // default 2
         textStyle: const TextStyle(
           fontSize: 13,
@@ -53,22 +48,21 @@ class _MyAppState extends State<MyApp> {
         ),
         background: Colors.red,
         backgroundRadius: 30,
+        child: MyMapPage(),
       ),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
+class MyMapPage extends StatefulWidget {
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MyMapPage> createState() => _MyMapPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final GlobalKey<_MyHomePageState> _childKey = GlobalKey();
-  final Controller _controller = Controller();
+class _MyMapPageState extends State<MyMapPage> {
+  final GlobalKey<MyMaplibreState> _childKey = GlobalKey<MyMaplibreState>();
 
   MapLibreMapController? controller;
-
   bool editMode = false;
   String? filename;
   String? fileName;
@@ -113,8 +107,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   // get only first track segment
                   lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
                   // addLine(lineSegment);
-                  // _controller.addLine!(lineSegment);
-                  _controller.doSomething!();
+                  _childKey.currentState!.doSomething();
+                  // _controller.doSomething!();
                 });
               } else {
                 // User canceled the picker
@@ -123,7 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      body: HolaMapa(controller: _controller),
+      body: MyMapLibre(key: _childKey),
     );
   }
 }
