@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
+import 'controller.dart';
 
-class MyMaplibre extends StatefulWidget {
-  const MyMaplibre({Key? key}) : super(key: key);
+class HolaMapa extends StatefulWidget {
+  final Controller controller;
+  const HolaMapa({
+    Key? key,
+    required this.controller,
+  }) : super(key: key);
 
   @override
-  State<MyMaplibre> createState() => _MyMaplibreState();
+  State<HolaMapa> createState() => _MyMaplibreState(controller);
 }
 
-class _MyMaplibreState extends State<MyMaplibre> {
-  MapLibreMapController? controller;
+class _MyMaplibreState extends State<HolaMapa> {
+  MapLibreMapController? mapController;
   List<LatLng> gpxCoords = [];
   Line? mapLine;
   List<Symbol> mapSymbols =
@@ -32,8 +37,16 @@ class _MyMaplibreState extends State<MyMaplibre> {
     super.initState();
   }
 
-  void _onMapCreated(MapLibreMapController mapController) async {
-    controller = mapController;
+  void doSomething() {
+    print('--- --------- ------ GETTING THERE?');
+  }
+
+  _MyMaplibreState(Controller _controller) {
+    _controller.doSomething = doSomething;
+  }
+
+  void _onMapCreated(MapLibreMapController contrl) async {
+    mapController = contrl;
   }
 
   @override
@@ -64,7 +77,7 @@ class _MyMaplibreState extends State<MyMaplibre> {
     rawGpx.add(trackSegment[last]);
     realNodes.add(cur);
 
-    mapLine = await controller!.addLine(
+    mapLine = await mapController!.addLine(
       LineOptions(
         geometry: gpxCoords,
         lineColor: "#ffa500",
@@ -73,7 +86,7 @@ class _MyMaplibreState extends State<MyMaplibre> {
       ),
     );
 
-    controller!.moveCamera(
+    mapController!.moveCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: bounds.southEast,
