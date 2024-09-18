@@ -69,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   MapLibreMapController? controller;
 
-  bool editMode = false;
+  bool editMode = true;
   String? filename;
   String? fileName;
 
@@ -113,8 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 setState(() {
                   // get only first track segment
                   lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-                  // addLine(lineSegment);
-                  // _controller.addLine!(lineSegment);
+                  // _controller.resetTrackLine!();
                   _controller.loadTrack!(lineSegment);
                 });
               } else {

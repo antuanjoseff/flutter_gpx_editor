@@ -6,21 +6,16 @@ class DeleteIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        print('--------------------on tab gesture detector');
-      },
-      child: const Stack(
-        alignment: Alignment.topRight,
-        children: [
-          Icon(Icons.square_rounded, color: Colors.green, size: 20),
-          Icon(
-            Icons.cancel,
-            size: 15,
-            color: Colors.red,
-          ),
-        ],
-      ),
+    return const Stack(
+      alignment: Alignment.topRight,
+      children: [
+        Icon(Icons.square_rounded, color: Colors.green, size: 20),
+        Icon(
+          Icons.cancel,
+          size: 15,
+          color: Colors.red,
+        ),
+      ],
     );
   }
 }
