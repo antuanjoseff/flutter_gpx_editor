@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
 import 'controller.dart';
+import 'move_icon.dart';
+import 'delete_icon.dart';
 
 class MyMapLibre extends StatefulWidget {
   final Controller controller;
@@ -30,6 +32,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   GeoXml? gpxOriginal;
   bool gpxLoaded = false;
+  bool showTools = true;
 
   @override
   void initState() {
@@ -41,7 +44,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   _MyMaplibreState(Controller controller) {
-    controller.doSomething = doSomething;
+    controller.loadTrack = loadTrack;
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -53,7 +56,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.dispose();
   }
 
-  void addLine(trackSegment) async {
+  void loadTrack(trackSegment) async {
     LatLng cur;
 
     Bounds bounds = Bounds(
@@ -104,17 +107,52 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   @override
   Widget build(BuildContext context) {
-    return MapLibreMap(
-      compassEnabled: false,
-      trackCameraPosition: true,
-      onMapCreated: _onMapCreated,
-      initialCameraPosition: const CameraPosition(
-        target: LatLng(42.0, 3.0),
-        zoom: 13.0,
+    return Stack(children: [
+      MapLibreMap(
+        compassEnabled: false,
+        trackCameraPosition: true,
+        onMapCreated: _onMapCreated,
+        initialCameraPosition: const CameraPosition(
+          target: LatLng(42.0, 3.0),
+          zoom: 13.0,
+        ),
+        styleString:
+            'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
       ),
-      styleString:
-          'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
-    );
+      ...[
+        showTools
+            ? Positioned(
+                right: 15,
+                top: 15,
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        print('ON TAB GESTURE DETECTOR');
+                      },
+                      child: const CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: MoveIcon(),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.all(4.0),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        print('ON TAB GESTURE DETECTOR');
+                      },
+                      child: const CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: DeleteIcon(),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Container(),
+      ],
+    ]);
   }
 }
 

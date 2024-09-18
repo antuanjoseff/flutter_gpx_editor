@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:icon_craft/icon_craft.dart';
 
-class MoveIcon extends StatelessWidget {
-  const MoveIcon({super.key});
+class DeleteIcon extends StatelessWidget {
+  const DeleteIcon({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +11,14 @@ class MoveIcon extends StatelessWidget {
         print('--------------------on tab gesture detector');
       },
       child: const Stack(
-        alignment: Alignment.topCenter,
+        alignment: Alignment.topRight,
         children: [
+          Icon(Icons.square_rounded, color: Colors.green, size: 20),
           Icon(
-            Icons.square,
+            Icons.cancel,
             size: 15,
-            color: Colors.green,
+            color: Colors.red,
           ),
-          Icon(Icons.pan_tool_alt_sharp, color: Colors.black, size: 35),
         ],
       ),
     );

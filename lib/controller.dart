@@ -1,5 +1,5 @@
 import 'package:geoxml/geoxml.dart';
 
 class Controller {
-  void Function(List<Wpt> lineSegment)? doSomething;
+  void Function(List<Wpt> lineSegment)? loadTrack;
 }
