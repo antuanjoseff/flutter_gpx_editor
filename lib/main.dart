@@ -73,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String? filename;
   String? fileName;
 
-  var lineSegment;
+  List<Wpt> lineSegment = [];
   GeoXml? gpxOriginal;
   bool gpxLoaded = false;
 
@@ -115,7 +115,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
                   // addLine(lineSegment);
                   // _controller.addLine!(lineSegment);
-                  _controller.doSomething!(7);
+                  _controller.doSomething!(lineSegment);
                 });
               } else {
                 // User canceled the picker

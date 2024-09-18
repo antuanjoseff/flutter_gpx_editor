@@ -28,7 +28,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   String? filename;
   String? fileName;
 
-  var lineSegment;
   GeoXml? gpxOriginal;
   bool gpxLoaded = false;
 
@@ -37,8 +36,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.initState();
   }
 
-  void doSomething(int i) {
-    print('--- ---------$i ------DO SOMETHING FUNCTION');
+  void doSomething(List<Wpt> linesegment) {
+    print('--- ---------$linesegment ------DO SOMETHING FUNCTION');
   }
 
   _MyMaplibreState(Controller controller) {
@@ -107,7 +106,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Widget build(BuildContext context) {
     return MapLibreMap(
       compassEnabled: false,
-      // myLocationEnabled: true,
       trackCameraPosition: true,
       onMapCreated: _onMapCreated,
       initialCameraPosition: const CameraPosition(
