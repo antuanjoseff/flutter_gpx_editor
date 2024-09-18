@@ -18,14 +18,15 @@ class MyMapLibre extends StatefulWidget {
 
 class _MyMaplibreState extends State<MyMapLibre> {
   MapLibreMapController? mapController;
-  List<LatLng> gpxCoords = [];
-  Line? mapLine;
+
+  Line? trackLine;
   List<Symbol> mapSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
 
   bool editMode = false;
   List<Wpt> rawGpx = [];
   List<LatLng> realNodes = [];
+  List<LatLng> gpxCoords = [];
 
   String? filename;
   String? fileName;
@@ -79,7 +80,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     rawGpx.add(trackSegment[last]);
     realNodes.add(cur);
 
-    mapLine = await mapController!.addLine(
+    trackLine = await mapController!.addLine(
       LineOptions(
         geometry: gpxCoords,
         lineColor: "#ffa500",
