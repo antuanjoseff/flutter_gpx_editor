@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:icon_craft/icon_craft.dart';
 
 class DeleteIcon extends StatelessWidget {
   const DeleteIcon({super.key});

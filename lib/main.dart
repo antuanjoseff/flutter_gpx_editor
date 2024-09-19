@@ -64,18 +64,18 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final GlobalKey<_MyHomePageState> _childKey = GlobalKey();
   final Controller _controller = Controller();
 
   MapLibreMapController? controller;
 
-  bool editMode = true;
+  bool editMode = false;
   String? filename;
   String? fileName;
 
   List<Wpt> lineSegment = [];
   GeoXml? gpxOriginal;
-  bool gpxLoaded = false;
+  bool trackLoaded = false;
+  List<Wpt> theGpx = [];
 
   @override
   void initState() {
@@ -94,6 +94,61 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('GPX'),
         actions: [
+          ...[
+            trackLoaded
+                ? IconButton(
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'Show Snackbar',
+                    onPressed: () async {
+                      editMode = !editMode;
+                      if (editMode) {
+                        _controller.addMapSymbols!();
+                        _controller.showEditIcons!();
+                      } else {
+                        _controller.removeMapSymbols!();
+                        _controller.hideEditIcons!();
+                      }
+                    },
+                  )
+                : Container()
+          ],
+          ...[
+            gpxOriginal != null
+                ? IconButton(
+                    icon: const Icon(Icons.save),
+                    tooltip: 'Show Snackbar',
+                    onPressed: () async {
+                      _controller.removeMapSymbols!();
+                      var gpx = GeoXml();
+                      gpx.creator = "dart-gpx library";
+
+                      gpx.metadata = gpxOriginal!.metadata;
+                      List<Wpt> newGpx = [];
+                      theGpx = _controller.getGpx!();
+                      for (var idx = 0; idx < theGpx.length; idx++) {
+                        Wpt wpt = theGpx[idx];
+                        newGpx.add(wpt);
+                      }
+
+                      Trkseg trkseg = Trkseg(trkpts: newGpx);
+                      gpx.trks = [
+                        Trk(trksegs: [trkseg])
+                      ];
+
+                      // generate xml string
+                      var gpxString = gpx.toGpxString(pretty: true);
+
+                      String? outputFile = await FilePicker.platform.saveFile(
+                        dialogTitle: 'Please select an output file:',
+                        bytes: utf8.encode(gpxString),
+                        // bytes: convertStringToUint8List(gpxString),
+                        fileName: '${fileName}_edited.gpx',
+                        allowedExtensions: ['gpx'],
+                      );
+                    },
+                  )
+                : Container()
+          ],
           IconButton(
             icon: const Icon(Icons.folder),
             tooltip: 'Show Snackbar',
@@ -110,11 +165,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
                 gpxOriginal = await GeoXml.fromGpxString(stream);
 
+                lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
+                await _controller.loadTrack!(lineSegment);
+                await _controller.addMapSymbols!;
+
                 setState(() {
-                  // get only first track segment
-                  lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-                  // _controller.resetTrackLine!();
-                  _controller.loadTrack!(lineSegment);
+                  trackLoaded = true;                
                 });
               } else {
                 // User canceled the picker

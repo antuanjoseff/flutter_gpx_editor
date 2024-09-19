@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:icon_craft/icon_craft.dart';
 
 class MoveIcon extends StatelessWidget {
   const MoveIcon({super.key});

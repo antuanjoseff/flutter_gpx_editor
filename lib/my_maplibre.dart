@@ -36,7 +36,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   GeoXml? gpxOriginal;
   bool gpxLoaded = false;
-  bool showTools = true;
+  bool showTools = false;
 
   Symbol? selectedSymbol;
 
@@ -49,11 +49,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   @override
   void initState() {
     super.initState();
-  }
-
-  _MyMaplibreState(Controller controller) {
-    controller.loadTrack = loadTrack;
-    controller.resetTrackLine = resetTrackLine;
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -205,19 +200,19 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return symbolOptions;
   }
 
-  void addMapSymbols() async {
-    print('ADD MAP SYMBOLS');
+  Future<List<Symbol>> addMapSymbols() async {
     mapSymbols =
         await mapController!.addSymbols(makeSymbolOptions(nodes, 'node-box'));
+    return mapSymbols;
   }
 
-  void removeSymbols() async {
+  void removeMapSymbols() async {
     await mapController!.removeSymbols(mapSymbols);
     mapSymbols = [];
   }
 
-  void resetSymbols() {
-    removeSymbols();
+  void resetMapSymbols() {
+    removeMapSymbols();
     addMapSymbols();
   }
 
@@ -228,7 +223,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.dispose();
   }
 
-  void loadTrack(trackSegment) async {
+  Future<Line?> loadTrack(trackSegment) async {
     LatLng cur;
 
     Bounds bounds = Bounds(
@@ -272,9 +267,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       ),
     );
 
-    if (editMode || !editMode) {
-      addMapSymbols();
-    }
+    return trackLine;
   }
 
   void resetTrackLine() {
@@ -282,7 +275,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       mapController!.removeLine(trackLine!);
       if (editMode) {
         editMode = false;
-        removeSymbols();
+        removeMapSymbols();
       }
     }
     editMode = false;
@@ -291,6 +284,28 @@ class _MyMaplibreState extends State<MyMapLibre> {
     gpxCoords = [];
     rawGpx = [];
     edits = [];
+  }
+
+  void showEditIcons(){
+    showTools = true;
+    setState(() {});
+  }
+
+  void hideEditIcons(){
+    showTools = false;
+    setState(() {});
+  }
+
+ _MyMaplibreState(Controller controller) {
+    controller.loadTrack = loadTrack;
+    controller.resetTrackLine = resetTrackLine;
+    controller.addMapSymbols = addMapSymbols;
+    controller.removeMapSymbols = removeMapSymbols;
+    controller.showEditIcons = showEditIcons;
+    controller.hideEditIcons = hideEditIcons;
+    controller.getGpx = (){
+      return rawGpx;
+    };
   }
 
   @override
