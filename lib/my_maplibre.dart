@@ -4,6 +4,7 @@ import 'package:geoxml/geoxml.dart';
 import 'controller.dart';
 import 'move_icon.dart';
 import 'delete_icon.dart';
+import 'undo_icon.dart';
 import 'package:throttling/throttling.dart';
 import 'util.dart';
 
@@ -19,6 +20,16 @@ class MyMapLibre extends StatefulWidget {
 }
 
 class _MyMaplibreState extends State<MyMapLibre> {
+  Color defaultColor1 = Colors.green; // Selects a mid-range green.
+  Color defaultColor2 = Colors.black; // Selects a mid-range green.
+  Color activeColor1 = Colors.black; // Selects a mid-range green.
+  Color activeColor2 = Colors.red; // Selects a mid-range green.
+  Color backgroundColor1 = Colors.white;
+  Color backgroundColor2 = Colors.yellow;
+  Color? currentColor1;
+  Color? currentColor2;
+  Color? backgroundColor;
+
   MapLibreMapController? mapController;
 
   Line? trackLine;
@@ -38,7 +49,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   bool gpxLoaded = false;
   bool showTools = false;
   bool draggableMode = false;
-  bool deleteeMode = false;
+  bool deleteMode = false;
 
   Symbol? selectedSymbol;
 
@@ -48,8 +59,23 @@ class _MyMaplibreState extends State<MyMapLibre> {
   final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
   final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
+  _MyMaplibreState(Controller controller) {
+    controller.loadTrack = loadTrack;
+    controller.resetTrackLine = resetTrackLine;
+    controller.addMapSymbols = addMapSymbols;
+    controller.removeMapSymbols = removeMapSymbols;
+    controller.showEditIcons = showEditIcons;
+    controller.hideEditIcons = hideEditIcons;
+    controller.getGpx = (){
+      return rawGpx;
+    };
+  }
+
   @override
   void initState() {
+    currentColor1 = defaultColor1;
+    currentColor2 = defaultColor2;
+    backgroundColor = backgroundColor1;
     super.initState();
   }
 
@@ -73,27 +99,18 @@ class _MyMaplibreState extends State<MyMapLibre> {
     setState(() {});
   }
 
-  // void _onSymbolTapped(Symbol symbol) async {
-  //   thr.throttle(() async {
-  //     if (selectedSymbol != null) {
-  //       String symbolId = await deactivateSymbol(selectedSymbol!, selectedNode);
-  //       if (symbolId != symbol.id) {
-  //         selectedSymbol = symbol;
-  //         selectedNode = await searchSymbol(symbol.id);
-  //         await activateSymbol(selectedSymbol!, selectedNode);
-  //       } else {
-  //         await deactivateSymbol(selectedSymbol!, selectedNode);
-  //       }
-  //       // setState(() {});
-  //       return;
-  //     }
-
-  //     selectedSymbol = symbol;
-  //     selectedNode = await searchSymbol(symbol.id);
-
-  //     activateSymbol(selectedSymbol!, selectedNode);
-  //   });
-  // }
+  void _onSymbolTapped(Symbol symbol) async {
+    selectedNode = await searchSymbol(symbol.id);
+    if (selectedNode == -1) return;
+    edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'delete'));
+    nodes.removeAt(selectedNode);
+    gpxCoords.removeAt(selectedNode);
+    rawGpx.removeAt(selectedNode);
+    await mapController!.removeSymbol(mapSymbols[selectedNode]);
+    mapSymbols.removeAt(selectedNode);
+    updateTrackLine();
+    setState(() {});
+  }
 
   void _onNodeDrag(id,
       {required current,
@@ -101,13 +118,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
       required origin,
       required point,
       required eventType}) async {
-    if (selectedNode == -1) return;
+    // if (selectedNode == -1) return;
 
     switch (eventType) {
       case DragEventType.start:
-        print('       DRAG START       -----------');
         selectedNode = await searchSymbol(id);
-        print('       DRAG START                 $selectedNode');
         selectedSymbol = mapSymbols[selectedNode];
         edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'moved'));
         break;
@@ -128,14 +143,16 @@ class _MyMaplibreState extends State<MyMapLibre> {
         rawGpx[selectedNode] = dragged;
 
         updateTrackLine();
-        // _updateSelectedSymbol(
-        //   selectedSymbol!,
-        //   SymbolOptions(
-        //       geometry: coord, draggable: false, iconImage: 'node-box'),
-        // );
+        String image = 'nodes-box';
+        if (draggableMode) {
+          image = 'draggable-box';
+        }
+        _updateSelectedSymbol(
+          selectedSymbol!,
+          SymbolOptions(
+              geometry: coord, draggable: draggableMode, iconImage: image),
+        );
 
-        await deactivateSymbol(selectedSymbol!, selectedNode);
-        selectedNode = -1;
         setState(() {});
         break;
     }
@@ -192,13 +209,15 @@ class _MyMaplibreState extends State<MyMapLibre> {
     // setState(() {});
   }
 
-  List<SymbolOptions> makeSymbolOptions(nodes, symbolIcon, draggable) {
+  List<SymbolOptions> makeSymbolOptions(nodes, image, draggable) {
     final symbolOptions = <SymbolOptions>[];
-
+    if (draggable) {
+      image = 'draggable-box';
+    }
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
       symbolOptions.add(SymbolOptions(
-          draggable: draggable, iconImage: symbolIcon, geometry: coord, textAnchor: idx.toString()));
+          draggable: draggable, iconImage: image, geometry: coord, textAnchor: idx.toString()));
     }
 
     return symbolOptions;
@@ -210,9 +229,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return mapSymbols;
   }
 
-  void removeMapSymbols() async {
+  Future <List> removeMapSymbols() async {
     await mapController!.removeSymbols(mapSymbols);
     mapSymbols = [];
+    return mapSymbols;
   }
 
   void resetMapSymbols() {
@@ -222,7 +242,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   @override
   void dispose() {
-    // mapController?.onSymbolTapped.remove(_onSymbolTapped);
     mapController!.onFeatureDrag.remove(_onNodeDrag);
     super.dispose();
   }
@@ -300,17 +319,54 @@ class _MyMaplibreState extends State<MyMapLibre> {
     setState(() {});
   }
 
- _MyMaplibreState(Controller controller) {
-    controller.loadTrack = loadTrack;
-    controller.resetTrackLine = resetTrackLine;
-    controller.addMapSymbols = addMapSymbols;
-    controller.removeMapSymbols = removeMapSymbols;
-    controller.showEditIcons = showEditIcons;
-    controller.hideEditIcons = hideEditIcons;
-    controller.getGpx = (){
-      return rawGpx;
-    };
+
+  void undoDelete(idx, wpt) async {
+    rawGpx.insert(idx, wpt);
+
+    LatLng latlon = LatLng(wpt.lat, wpt.lon);
+    gpxCoords.insert(idx, latlon);
+    nodes.insert(idx, latlon);
+    updateTrackLine();
+    resetMapSymbols();
   }
+
+  void undoMove(idx, wpt) async {
+    rawGpx[idx] = wpt;
+    LatLng latlon = LatLng(wpt.lat, wpt.lon);
+    nodes[idx] = latlon;
+    gpxCoords[idx] = latlon;
+    updateTrackLine();
+    String image = 'node-box';
+    if (draggableMode) {
+      image = 'draggable-box';
+    }
+    _updateSelectedSymbol(
+      mapSymbols[idx]!,
+      SymbolOptions(draggable: draggableMode, iconImage: image, geometry: latlon),
+    );
+  }
+
+  void undo() async {
+    if (edits.isEmpty) {
+      return;
+    }
+
+    var (idx, wpt, type) = edits.removeLast();
+    
+    switch (type) {
+      case 'moved':
+        undoMove(idx, wpt);
+        break;
+      case 'delete':
+        undoDelete(idx, wpt);
+        break;
+    }
+
+    if (edits.isEmpty) {
+      setState(() {});
+    }    
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -379,14 +435,23 @@ class _MyMaplibreState extends State<MyMapLibre> {
                 child: Column(
                   children: [
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         draggableMode = !draggableMode;
-                        removeMapSymbols();
-                        addMapSymbols(draggableMode);
+                        currentColor1 = defaultColor1;
+                        currentColor2 = defaultColor2;
+                        backgroundColor = backgroundColor1;
+                        if(draggableMode){
+                          currentColor1 = activeColor1;
+                          currentColor2 = activeColor2;
+                          backgroundColor = backgroundColor2;
+                        }
+                        await removeMapSymbols();
+                        await addMapSymbols(draggableMode);
+                        setState(() {});
                       },
-                      child: const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: MoveIcon(),
+                      child: CircleAvatar(
+                        backgroundColor: backgroundColor,
+                        child: MoveIcon(color1: currentColor1!, color2: currentColor2!),
                       ),
                     ),
                     const Padding(
@@ -394,13 +459,33 @@ class _MyMaplibreState extends State<MyMapLibre> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        deleteNode();
+                        draggableMode = false;
+                        removeMapSymbols();
+                        addMapSymbols(draggableMode);
+                        deleteMode = !deleteMode;
+                        if (deleteMode){
+                          mapController!.onSymbolTapped.add(_onSymbolTapped);
+                        } else {
+                          mapController?.onSymbolTapped.remove(_onSymbolTapped);
+                        }
                       },
                       child: const CircleAvatar(
                         backgroundColor: Colors.white,
                         child: DeleteIcon(),
                       ),
                     ),
+                    const Padding(
+                      padding: EdgeInsets.all(4.0),
+                    ),
+                    ...[edits.isNotEmpty ? GestureDetector(
+                      onTap: () {
+                        undo();
+                      },
+                      child: const CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: UndoIcon(),
+                      ),
+                    ) : Container()],
                   ],
                 ),
               )
