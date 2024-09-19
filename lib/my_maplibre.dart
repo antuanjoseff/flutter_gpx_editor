@@ -25,7 +25,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Color activeColor1 = Colors.black; // Selects a mid-range green.
   Color activeColor2 = Colors.red; // Selects a mid-range green.
   Color backgroundColor1 = Colors.white;
-  Color backgroundColor2 = Colors.yellow;
+  Color backgroundColor2 = Colors.white;
   Color? currentColor1;
   Color? currentColor2;
   Color? backgroundColor;
@@ -211,9 +211,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   List<SymbolOptions> makeSymbolOptions(nodes, image, draggable) {
     final symbolOptions = <SymbolOptions>[];
-    if (draggable) {
-      image = 'draggable-box';
-    }
+    
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
       symbolOptions.add(SymbolOptions(
@@ -223,9 +221,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return symbolOptions;
   }
 
-  Future<List<Symbol>> addMapSymbols(draggable) async {
+  Future<List<Symbol>> addMapSymbols(draggable, image) async {
     mapSymbols =
-        await mapController!.addSymbols(makeSymbolOptions(nodes, 'node-box', draggable));
+        await mapController!.addSymbols(makeSymbolOptions(nodes, image, draggable));
     return mapSymbols;
   }
 
@@ -237,7 +235,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void resetMapSymbols() {
     removeMapSymbols();
-    addMapSymbols(draggableMode);
+    addMapSymbols(draggableMode, 'plain-node');
   }
 
   @override
@@ -377,15 +375,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
         onMapCreated: _onMapCreated,
         onStyleLoadedCallback: () {
           addImageFromAsset(
-              mapController!, "node-box", "assets/symbols/box.png");
-          addImageFromAsset(mapController!, "selected-box",
-              "assets/symbols/selected-box.png");
+              mapController!, "node-plain", "assets/symbols/node-plain.png");
           addImageFromAsset(
-              mapController!, "virtual-box", "assets/symbols/virtual-box.png");
+              mapController!, "node-drag", "assets/symbols/node-drag.png");
           addImageFromAsset(
-              mapController!, "marker", "assets/symbols/custom-marker.png");
-          addImageFromAsset(
-              mapController!, "draggable-box", "assets/symbols/box-draggable.png");
+              mapController!, "node-delete", "assets/symbols/node-delete.png");
         },
         onMapClick: (point, clickedPoint) async {
           print('ON MAP CLICKED $editMode');
@@ -436,17 +430,22 @@ class _MyMaplibreState extends State<MyMapLibre> {
                   children: [
                     GestureDetector(
                       onTap: () async {
+                        await removeMapSymbols();
+                        deleteMode = false;
                         draggableMode = !draggableMode;
                         currentColor1 = defaultColor1;
                         currentColor2 = defaultColor2;
                         backgroundColor = backgroundColor1;
+
                         if(draggableMode){
                           currentColor1 = activeColor1;
                           currentColor2 = activeColor2;
                           backgroundColor = backgroundColor2;
+                          await addMapSymbols(draggableMode, 'node-drag');
+                        } else{
+                          await addMapSymbols(draggableMode, 'node-plain');
                         }
-                        await removeMapSymbols();
-                        await addMapSymbols(draggableMode);
+                        
                         setState(() {});
                       },
                       child: CircleAvatar(
@@ -461,11 +460,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
                       onTap: () {
                         draggableMode = false;
                         removeMapSymbols();
-                        addMapSymbols(draggableMode);
                         deleteMode = !deleteMode;
                         if (deleteMode){
+                          addMapSymbols(draggableMode, 'node-delete');
                           mapController!.onSymbolTapped.add(_onSymbolTapped);
                         } else {
+                          addMapSymbols(draggableMode, 'node-plain');
                           mapController?.onSymbolTapped.remove(_onSymbolTapped);
                         }
                       },

@@ -69,11 +69,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/symbols/box.png
-    - assets/symbols/selected-box.png
-    - assets/symbols/virtual-box.png
-    - assets/symbols/custom-marker.png
-    - assets/symbols/box-draggable.png
+    - assets/symbols/node-plain.png
+    - assets/symbols/node-drag.png
+    - assets/symbols/node-delete.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
