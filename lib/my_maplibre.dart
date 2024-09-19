@@ -37,6 +37,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
   GeoXml? gpxOriginal;
   bool gpxLoaded = false;
   bool showTools = false;
+  bool draggableMode = false;
+  bool deleteeMode = false;
 
   Symbol? selectedSymbol;
 
@@ -53,7 +55,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    mapController!.onSymbolTapped.add(_onSymbolTapped);
+    // mapController!.onSymbolTapped.add(_onSymbolTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
   }
 
@@ -71,27 +73,27 @@ class _MyMaplibreState extends State<MyMapLibre> {
     setState(() {});
   }
 
-  void _onSymbolTapped(Symbol symbol) async {
-    thr.throttle(() async {
-      if (selectedSymbol != null) {
-        String symbolId = await deactivateSymbol(selectedSymbol!, selectedNode);
-        if (symbolId != symbol.id) {
-          selectedSymbol = symbol;
-          selectedNode = await searchSymbol(symbol.id);
-          await activateSymbol(selectedSymbol!, selectedNode);
-        } else {
-          await deactivateSymbol(selectedSymbol!, selectedNode);
-        }
-        // setState(() {});
-        return;
-      }
+  // void _onSymbolTapped(Symbol symbol) async {
+  //   thr.throttle(() async {
+  //     if (selectedSymbol != null) {
+  //       String symbolId = await deactivateSymbol(selectedSymbol!, selectedNode);
+  //       if (symbolId != symbol.id) {
+  //         selectedSymbol = symbol;
+  //         selectedNode = await searchSymbol(symbol.id);
+  //         await activateSymbol(selectedSymbol!, selectedNode);
+  //       } else {
+  //         await deactivateSymbol(selectedSymbol!, selectedNode);
+  //       }
+  //       // setState(() {});
+  //       return;
+  //     }
 
-      selectedSymbol = symbol;
-      selectedNode = await searchSymbol(symbol.id);
+  //     selectedSymbol = symbol;
+  //     selectedNode = await searchSymbol(symbol.id);
 
-      activateSymbol(selectedSymbol!, selectedNode);
-    });
-  }
+  //     activateSymbol(selectedSymbol!, selectedNode);
+  //   });
+  // }
 
   void _onNodeDrag(id,
       {required current,
@@ -103,7 +105,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
     switch (eventType) {
       case DragEventType.start:
+        print('       DRAG START       -----------');
         selectedNode = await searchSymbol(id);
+        print('       DRAG START                 $selectedNode');
         selectedSymbol = mapSymbols[selectedNode];
         edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'moved'));
         break;
@@ -124,11 +128,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
         rawGpx[selectedNode] = dragged;
 
         updateTrackLine();
-        _updateSelectedSymbol(
-          selectedSymbol!,
-          SymbolOptions(
-              geometry: coord, draggable: false, iconImage: 'node-box'),
-        );
+        // _updateSelectedSymbol(
+        //   selectedSymbol!,
+        //   SymbolOptions(
+        //       geometry: coord, draggable: false, iconImage: 'node-box'),
+        // );
 
         await deactivateSymbol(selectedSymbol!, selectedNode);
         selectedNode = -1;
@@ -188,21 +192,21 @@ class _MyMaplibreState extends State<MyMapLibre> {
     // setState(() {});
   }
 
-  List<SymbolOptions> makeSymbolOptions(nodes, symbolIcon) {
+  List<SymbolOptions> makeSymbolOptions(nodes, symbolIcon, draggable) {
     final symbolOptions = <SymbolOptions>[];
 
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
       symbolOptions.add(SymbolOptions(
-          iconImage: symbolIcon, geometry: coord, textAnchor: idx.toString()));
+          draggable: draggable, iconImage: symbolIcon, geometry: coord, textAnchor: idx.toString()));
     }
 
     return symbolOptions;
   }
 
-  Future<List<Symbol>> addMapSymbols() async {
+  Future<List<Symbol>> addMapSymbols(draggable) async {
     mapSymbols =
-        await mapController!.addSymbols(makeSymbolOptions(nodes, 'node-box'));
+        await mapController!.addSymbols(makeSymbolOptions(nodes, 'node-box', draggable));
     return mapSymbols;
   }
 
@@ -213,12 +217,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void resetMapSymbols() {
     removeMapSymbols();
-    addMapSymbols();
+    addMapSymbols(draggableMode);
   }
 
   @override
   void dispose() {
-    mapController?.onSymbolTapped.remove(_onSymbolTapped);
+    // mapController?.onSymbolTapped.remove(_onSymbolTapped);
     mapController!.onFeatureDrag.remove(_onNodeDrag);
     super.dispose();
   }
@@ -324,6 +328,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
               mapController!, "virtual-box", "assets/symbols/virtual-box.png");
           addImageFromAsset(
               mapController!, "marker", "assets/symbols/custom-marker.png");
+          addImageFromAsset(
+              mapController!, "draggable-box", "assets/symbols/box-draggable.png");
         },
         onMapClick: (point, clickedPoint) async {
           print('ON MAP CLICKED $editMode');
@@ -374,7 +380,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        print('ON TAB GESTURE DETECTOR');
+                        draggableMode = !draggableMode;
+                        removeMapSymbols();
+                        addMapSymbols(draggableMode);
                       },
                       child: const CircleAvatar(
                         backgroundColor: Colors.white,

@@ -101,8 +101,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     tooltip: 'Show Snackbar',
                     onPressed: () async {
                       editMode = !editMode;
+                      bool draggableMode = false;
                       if (editMode) {
-                        _controller.addMapSymbols!();
+                        _controller.addMapSymbols!(draggableMode);
                         _controller.showEditIcons!();
                       } else {
                         _controller.removeMapSymbols!();
