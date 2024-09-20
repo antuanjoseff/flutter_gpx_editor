@@ -8,10 +8,10 @@ class DeleteIcon extends StatelessWidget {
     return const Stack(
       alignment: Alignment.topRight,
       children: [
-        Icon(Icons.square_rounded, color: Colors.green, size: 20),
+        Icon(Icons.square_rounded, color: Colors.grey, size: 25),
         Icon(
-          Icons.cancel,
-          size: 15,
+          Icons.delete,
+          size: 20,
           color: Colors.red,
         ),
       ],

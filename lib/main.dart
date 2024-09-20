@@ -103,7 +103,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       editMode = !editMode;
                       bool draggableMode = false;
                       if (editMode) {
-                        _controller.addMapSymbols!(draggableMode, 'node-plain');
+                        _controller.addMapSymbols!();
                         _controller.showEditIcons!();
                       } else {
                         _controller.removeMapSymbols!();

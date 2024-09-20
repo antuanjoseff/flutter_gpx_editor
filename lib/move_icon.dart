@@ -21,15 +21,15 @@ class _MoveIconState extends State<MoveIcon> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.topCenter,
+    return const Stack(
+      alignment: Alignment.topRight,
       children: [
+        Icon(Icons.square_rounded, color: Colors.grey, size: 30),
         Icon(
-          Icons.square,
-          size: 15,
-          color: widget.color1,
+          Icons.control_camera_rounded,
+          size: 20,
+          color: Colors.red,
         ),
-        Icon(Icons.pan_tool_alt_sharp, color: widget.color2, size: 35),
       ],
     );
   }
