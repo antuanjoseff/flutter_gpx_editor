@@ -10,9 +10,12 @@ import 'package:throttling/throttling.dart';
 import 'util.dart';
 
 class MyMapLibre extends StatefulWidget {
+  final GlobalKey<ScaffoldState> scaffoldKey;
   final Controller controller;
+  
   const MyMapLibre({
     Key? key,
+    required this.scaffoldKey,
     required this.controller,
   }) : super(key: key);
 
@@ -148,9 +151,30 @@ class _MyMaplibreState extends State<MyMapLibre> {
       updateTrackLine();
       resetMapSymbols();
       setState(() {});
+    } else {
+      // Show snalbar message
+     showSnackBar('El node seleccionat està masss lluny del track');
     }
         
   }
+
+void showSnackBar (String txt) {
+  ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.warning_rounded, color: Colors.white,),
+            SizedBox(width: 20),                  
+            Expanded(
+              child: Text(txt)
+            ),
+          ],
+        ),
+        backgroundColor: Colors.purple,
+        duration: const Duration(milliseconds: 1500),
+      ),
+  );
+}
 
   void deleteNode() async {
     if (selectedNode == -1) return;

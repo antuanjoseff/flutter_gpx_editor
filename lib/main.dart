@@ -65,7 +65,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final Controller _controller = Controller();
-
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
   MapLibreMapController? controller;
 
   bool editMode = false;
@@ -96,21 +97,26 @@ class _MyHomePageState extends State<MyHomePage> {
         actions: [
           ...[
             trackLoaded
-                ? IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Show Snackbar',
-                    onPressed: () async {
-                      editMode = !editMode;
-                      bool draggableMode = false;
-                      if (editMode) {
-                        _controller.addMapSymbols!();
-                        _controller.showEditIcons!();
-                      } else {
-                        _controller.removeMapSymbols!();
-                        _controller.hideEditIcons!();
-                      }
-                    },
-                  )
+                ? CircleAvatar(
+                  backgroundColor: editMode ? Colors.white : Colors.transparent,
+                  child: IconButton(
+                      icon: Icon(Icons.edit,),
+                      tooltip: 'Show Snackbar',
+                      onPressed: () async {
+                        editMode = !editMode;
+                        if (editMode) {
+                          _controller.addMapSymbols!();
+                          _controller.showEditIcons!();
+                        } else {
+                          _controller.removeMapSymbols!();
+                          _controller.hideEditIcons!();
+                        }
+                        setState(() {
+                          
+                        });
+                      },
+                    ),
+                )
                 : Container()
           ],
           ...[
@@ -180,7 +186,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      body: MyMapLibre(controller: _controller),
+      body: MyMapLibre(
+        scaffoldKey: _scaffoldKey,
+        controller: _controller
+      ),
     );
   }
 }
