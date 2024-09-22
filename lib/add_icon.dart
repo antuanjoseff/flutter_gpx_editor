@@ -21,10 +21,10 @@ class _AddIconState extends State<AddIcon> {
 
   @override
   Widget build(BuildContext context) {
-    return const Stack(
+    return Stack(
       alignment: Alignment.topRight,
       children: [
-        Positioned(
+        const Positioned(
           top: 4,
           right: 4,
           child: Icon(
@@ -38,7 +38,7 @@ class _AddIconState extends State<AddIcon> {
           child: Icon(
             Icons.add_box,
             size: 25,
-            color: Colors.red,
+            color: widget.color1,
           ),
         ),        
       ],

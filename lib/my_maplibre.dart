@@ -36,7 +36,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Color activeColor2 = Colors.white; // Selects a mid-range green.
   
   Color backgroundInactive = Colors.white;
-  Color backgroundActive = Colors.black;
+  Color backgroundActive = Colors.pink;
   
   Color? colorIcon1;
   Color? colorIcon2;
@@ -369,8 +369,8 @@ void showSnackBar (String txt) {
     trackLine = await mapController!.addLine(
       LineOptions(
         geometry: gpxCoords,
-        lineColor: "#ffa500",
-        lineWidth: 2.5,
+        lineColor: Colors.pink.toHexStringRGB(),
+        lineWidth: 3,
         lineOpacity: 0.9,
       ),
     );
@@ -521,7 +521,10 @@ void showSnackBar (String txt) {
                       },
                       child: CircleAvatar(
                         backgroundColor: mapTools['move']! ? backgroundActive : Colors.white,
-                        child: MoveIcon(color1: colorIcon1!, color2: colorIcon2!),
+                        child: MoveIcon(
+                          color1: mapTools['move']! ? Colors.white : Colors.grey,
+                          color2: Colors.white
+                        ),
                       ),
                     ),
                     const Padding(
@@ -545,7 +548,9 @@ void showSnackBar (String txt) {
                       },
                       child: CircleAvatar(
                         backgroundColor: mapTools['add']! ? backgroundActive : Colors.white,
-                        child: AddIcon(color1: colorIcon1!, color2: colorIcon2!),
+                        child: AddIcon(
+                          color1: mapTools['add']! ? Colors.white : Colors.grey,
+                          color2: colorIcon2!),
                       ),
                     ),                
                     const Padding(
@@ -565,7 +570,10 @@ void showSnackBar (String txt) {
                       },
                       child: CircleAvatar(
                         backgroundColor: mapTools['delete']! ? backgroundActive : Colors.white,
-                        child: const DeleteIcon(),
+                        child: DeleteIcon(
+                          color1: mapTools['delete']! ? Colors.white : Colors.grey,
+                          color2: colorIcon2!
+                        ),
                       ),
                     ),
                     const Padding(

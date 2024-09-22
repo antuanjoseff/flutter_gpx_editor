@@ -92,15 +92,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('GPX'),
+        backgroundColor: Colors.pink,
+        // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('GPX', style: TextStyle(color: Colors.white),),
         actions: [
           ...[
             trackLoaded
                 ? CircleAvatar(
                   backgroundColor: editMode ? Colors.white : Colors.transparent,
                   child: IconButton(
-                      icon: Icon(Icons.edit,),
+                      icon: Icon(Icons.edit,color: editMode ? Colors.pink : Colors.white),
                       tooltip: 'Show Snackbar',
                       onPressed: () async {
                         editMode = !editMode;
@@ -122,7 +123,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ...[
             gpxOriginal != null
                 ? IconButton(
-                    icon: const Icon(Icons.save),
+                    icon: const Icon(Icons.save, color: Colors.white,),
                     tooltip: 'Show Snackbar',
                     onPressed: () async {
                       _controller.removeMapSymbols!();
@@ -157,7 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 : Container()
           ],
           IconButton(
-            icon: const Icon(Icons.folder),
+            icon: const Icon(Icons.folder, color: Colors.white),
             tooltip: 'Show Snackbar',
             onPressed: () async {
               FilePickerResult? result = await FilePicker.platform.pickFiles();
