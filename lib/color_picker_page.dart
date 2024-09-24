@@ -16,7 +16,17 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('COLOR PICKER'),
+        leading: BackButton(
+          onPressed: () {
+Navigator.of(context).pop((
+                trackWidth,
+                trackColor,
+              ));            
+          },
+          
+        )
       ),
+        
       body: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
