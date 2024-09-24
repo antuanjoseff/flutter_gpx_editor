@@ -8,7 +8,7 @@ import 'add_icon.dart';
 import 'undo_icon.dart';
 import 'package:throttling/throttling.dart';
 import 'util.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'color_picker_page.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -479,32 +479,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
-  void pickColor(BuildContext context) => showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-          title: const Text('Escull un color'),
-          scrollable: true,
-          content: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              buildColorPicker(),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Aplica'),
-              ),
-            ],
-          )));
-
-  Widget buildColorPicker() => ColorPicker(
-      pickerColor: Colors.red,
-      enableAlpha: false,
-      displayThumbColor: true,
-      labelTypes: [],
-      onColorChanged: (color) {
-        LineOptions changes = LineOptions(lineColor: color.toHexStringRGB());
-        updateTrack(changes);
-      });
-
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
@@ -545,7 +519,18 @@ class _MyMaplibreState extends State<MyMapLibre> {
                               color: Colors.grey,
                             ),
                             tooltip: 'Change track color',
-                            onPressed: () => pickColor(context)),
+                            onPressed: () async {
+                              // Navigate to page
+                              var (double trackWidth, Color trackColor) =
+                                  await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ColorPickerPage()),
+                              );
+                              print(
+                                  '......................$trackWidth...$trackColor');
+                            }),
                       ),
                     ),
                     const Padding(
