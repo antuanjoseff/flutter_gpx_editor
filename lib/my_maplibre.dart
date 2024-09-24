@@ -8,6 +8,7 @@ import 'add_icon.dart';
 import 'undo_icon.dart';
 import 'package:throttling/throttling.dart';
 import 'util.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -29,6 +30,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     'add': false,
     'delete': false,
   };
+  String trackColor =
+      Colors.pink.toHexStringRGB(); // Selects a mid-range green.
   Color defaultColorIcon1 = Colors.grey; // Selects a mid-range green.
   Color defaultColorIcon2 = Colors.grey; // Selects a mid-range green.
 
@@ -344,6 +347,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.dispose();
   }
 
+  Future<void> updateTrackColor(color) async {
+    LineOptions changes = LineOptions(lineColor: color);
+    await mapController!.updateLine(trackLine!, changes);
+  }
+
   Future<Line?> loadTrack(trackSegment) async {
     LatLng cur;
 
@@ -370,7 +378,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     trackLine = await mapController!.addLine(
       LineOptions(
         geometry: gpxCoords,
-        lineColor: Colors.pink.toHexStringRGB(),
+        lineColor: trackColor,
         lineWidth: 3,
         lineOpacity: 0.9,
       ),
@@ -472,6 +480,28 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
+  void pickColor(BuildContext context) => showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+          title: const Text('Escull un color'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              buildColorPicker(),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Aplica'),
+              ),
+            ],
+          )));
+
+  Widget buildColorPicker() => ColorPicker(
+      pickerColor: Colors.red,
+      onColorChanged: (color) {
+        print('new color ${color.toHexStringRGB()}');
+        updateTrackColor(color.toHexStringRGB());
+      });
+
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
@@ -498,10 +528,26 @@ class _MyMaplibreState extends State<MyMapLibre> {
       ...[
         showTools
             ? Positioned(
-                right: 15,
-                top: 15,
+                right: 10,
+                top: 10,
                 child: Column(
                   children: [
+                    GestureDetector(
+                      onTap: () {},
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: IconButton(
+                            icon: const Icon(
+                              Icons.palette,
+                              color: Colors.grey,
+                            ),
+                            tooltip: 'Change track color',
+                            onPressed: () => pickColor(context)),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.all(2.0),
+                    ),
                     GestureDetector(
                       onTap: () async {
                         print('------------------------${mapTools['move']}');
@@ -528,7 +574,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                       ),
                     ),
                     const Padding(
-                      padding: EdgeInsets.all(4.0),
+                      padding: EdgeInsets.all(2.0),
                     ),
                     GestureDetector(
                       onTap: () async {
@@ -556,7 +602,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                       ),
                     ),
                     const Padding(
-                      padding: EdgeInsets.all(4.0),
+                      padding: EdgeInsets.all(2.0),
                     ),
                     GestureDetector(
                       onTap: () {
