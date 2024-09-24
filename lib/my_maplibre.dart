@@ -347,8 +347,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.dispose();
   }
 
-  Future<void> updateTrackColor(color) async {
-    LineOptions changes = LineOptions(lineColor: color);
+  Future<void> updateTrack(changes) async {
     await mapController!.updateLine(trackLine!, changes);
   }
 
@@ -484,8 +483,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
       context: context,
       builder: (context) => AlertDialog(
           title: const Text('Escull un color'),
+          scrollable: true,
           content: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             children: [
               buildColorPicker(),
               TextButton(
@@ -497,9 +497,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   Widget buildColorPicker() => ColorPicker(
       pickerColor: Colors.red,
+      enableAlpha: false,
+      displayThumbColor: true,
+      labelTypes: [],
       onColorChanged: (color) {
-        print('new color ${color.toHexStringRGB()}');
-        updateTrackColor(color.toHexStringRGB());
+        LineOptions changes = LineOptions(lineColor: color.toHexStringRGB());
+        updateTrack(changes);
       });
 
   @override
