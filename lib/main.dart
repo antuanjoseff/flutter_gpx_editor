@@ -66,7 +66,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final Controller _controller = Controller();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  
+
   MapLibreMapController? controller;
 
   bool editMode = false;
@@ -94,14 +94,19 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Colors.pink,
         // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('GPX', style: TextStyle(color: Colors.white),),
+        title: const Text(
+          'GPX',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           ...[
             trackLoaded
                 ? CircleAvatar(
-                  backgroundColor: editMode ? Colors.white : Colors.transparent,
-                  child: IconButton(
-                      icon: Icon(Icons.edit,color: editMode ? Colors.pink : Colors.white),
+                    backgroundColor:
+                        editMode ? Colors.white : Colors.transparent,
+                    child: IconButton(
+                      icon: Icon(Icons.edit,
+                          color: editMode ? Colors.pink : Colors.white),
                       tooltip: 'Show Snackbar',
                       onPressed: () async {
                         editMode = !editMode;
@@ -112,18 +117,19 @@ class _MyHomePageState extends State<MyHomePage> {
                           _controller.removeMapSymbols!();
                           _controller.hideEditIcons!();
                         }
-                        setState(() {
-                          
-                        });
+                        setState(() {});
                       },
                     ),
-                )
+                  )
                 : Container()
           ],
           ...[
             gpxOriginal != null
                 ? IconButton(
-                    icon: const Icon(Icons.save, color: Colors.white,),
+                    icon: const Icon(
+                      Icons.save,
+                      color: Colors.white,
+                    ),
                     tooltip: 'Show Snackbar',
                     onPressed: () async {
                       _controller.removeMapSymbols!();
@@ -174,11 +180,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 gpxOriginal = await GeoXml.fromGpxString(stream);
 
                 lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
+                await _controller.removeTrackLine!;
                 await _controller.loadTrack!(lineSegment);
                 await _controller.addMapSymbols!;
 
                 setState(() {
-                  trackLoaded = true;                
+                  trackLoaded = true;
                 });
               } else {
                 // User canceled the picker
@@ -187,10 +194,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      body: MyMapLibre(
-        scaffoldKey: _scaffoldKey,
-        controller: _controller
-      ),
+      body: MyMapLibre(scaffoldKey: _scaffoldKey, controller: _controller),
     );
   }
 }

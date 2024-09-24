@@ -12,7 +12,7 @@ import 'util.dart';
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final Controller controller;
-  
+
   const MyMapLibre({
     Key? key,
     required this.scaffoldKey,
@@ -31,13 +31,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
   };
   Color defaultColorIcon1 = Colors.grey; // Selects a mid-range green.
   Color defaultColorIcon2 = Colors.grey; // Selects a mid-range green.
-  
+
   Color activeColor1 = Colors.grey; // Selects a mid-range green.
   Color activeColor2 = Colors.white; // Selects a mid-range green.
-  
+
   Color backgroundInactive = Colors.white;
   Color backgroundActive = Colors.pink;
-  
+
   Color? colorIcon1;
   Color? colorIcon2;
   Color? backgroundColor;
@@ -74,12 +74,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
-    controller.resetTrackLine = resetTrackLine;
+    controller.removeTrackLine = removeTrackLine;
     controller.addMapSymbols = addMapSymbols;
     controller.removeMapSymbols = removeMapSymbols;
     controller.showEditIcons = showEditIcons;
     controller.hideEditIcons = hideEditIcons;
-    controller.getGpx = (){
+    controller.getGpx = () {
       return rawGpx;
     };
   }
@@ -92,26 +92,25 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.initState();
   }
 
-  void deactivateTools(){
+  void deactivateTools() {
     for (String tool in mapTools.keys) {
       mapTools[tool] = false;
     }
   }
 
-  void activateTool(tool){
+  void activateTool(tool) {
     deactivateTools();
     mapTools[tool] = true;
   }
 
-  void toggleTool(tool){
+  void toggleTool(tool) {
     for (String ktool in mapTools.keys) {
       if (ktool == tool) {
         mapTools[tool] = !mapTools[tool]!;
       } else {
         mapTools[ktool] = false;
-      }      
+      }
     }
-    
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -120,9 +119,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     mapController!.onFeatureDrag.add(_onNodeDrag);
   }
 
-  void addNode (point, clickedPoint) async {
+  void addNode(point, clickedPoint) async {
     if (gpxCoords.isEmpty || !mapTools['add']!) return;
-    
+
     Stopwatch stopwatch = new Stopwatch()..start();
     int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
     print('Closest at ($segment) executed in ${stopwatch.elapsed}');
@@ -138,7 +137,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
       mapSymbols.insert(segment + 1, added);
       nodes.insert(segment + 1, P);
-      
+
       gpxCoords.insert(segment + 1, P);
       Wpt newWpt =
           cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
@@ -153,28 +152,28 @@ class _MyMaplibreState extends State<MyMapLibre> {
       setState(() {});
     } else {
       // Show snalbar message
-     showSnackBar('El node seleccionat està masss lluny del track');
+      showSnackBar('El node seleccionat està masss lluny del track');
     }
-        
   }
 
-void showSnackBar (String txt) {
-  ScaffoldMessenger.of(context).showSnackBar(
+  void showSnackBar(String txt) {
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.warning_rounded, color: Colors.white,),
-            SizedBox(width: 20),                  
-            Expanded(
-              child: Text(txt)
+            Icon(
+              Icons.warning_rounded,
+              color: Colors.white,
             ),
+            SizedBox(width: 20),
+            Expanded(child: Text(txt)),
           ],
         ),
         backgroundColor: Colors.purple,
         duration: const Duration(milliseconds: 1500),
       ),
-  );
-}
+    );
+  }
 
   void deleteNode() async {
     if (selectedNode == -1) return;
@@ -300,7 +299,7 @@ void showSnackBar (String txt) {
     // setState(() {});
   }
 
-  String getNodesImage(tools){
+  String getNodesImage(tools) {
     if (tools['move']) return 'node-drag';
     if (tools['add']) return 'node-plain';
     if (tools['delete']) return 'node-delete';
@@ -314,19 +313,21 @@ void showSnackBar (String txt) {
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
       symbolOptions.add(SymbolOptions(
-          draggable: draggable, iconImage: image, geometry: coord, textAnchor: idx.toString()));
+          draggable: draggable,
+          iconImage: image,
+          geometry: coord,
+          textAnchor: idx.toString()));
     }
 
     return symbolOptions;
   }
 
   Future<List<Symbol>> addMapSymbols() async {
-    mapSymbols =
-        await mapController!.addSymbols(makeSymbolOptions(nodes));
+    mapSymbols = await mapController!.addSymbols(makeSymbolOptions(nodes));
     return mapSymbols;
   }
 
-  Future <List> removeMapSymbols() async {
+  Future<List> removeMapSymbols() async {
     await mapController!.removeSymbols(mapSymbols);
     mapSymbols = [];
     return mapSymbols;
@@ -390,7 +391,7 @@ void showSnackBar (String txt) {
     return trackLine;
   }
 
-  void resetTrackLine() {
+  void removeTrackLine() {
     if (trackLine != null) {
       mapController!.removeLine(trackLine!);
       if (editMode) {
@@ -406,16 +407,15 @@ void showSnackBar (String txt) {
     edits = [];
   }
 
-  void showEditIcons(){
+  void showEditIcons() {
     showTools = true;
     setState(() {});
   }
 
-  void hideEditIcons(){
+  void hideEditIcons() {
     showTools = false;
     setState(() {});
   }
-
 
   void undoDelete(idx, wpt) async {
     rawGpx.insert(idx, wpt);
@@ -454,7 +454,7 @@ void showSnackBar (String txt) {
     }
 
     var (idx, wpt, type) = edits.removeLast();
-    
+
     switch (type) {
       case 'moved':
         undoMove(idx, wpt);
@@ -469,9 +469,8 @@ void showSnackBar (String txt) {
 
     if (edits.isEmpty) {
       setState(() {});
-    }    
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -511,33 +510,34 @@ void showSnackBar (String txt) {
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
 
-                        if(mapTools['move']!){
+                        if (mapTools['move']!) {
                           colorIcon1 = activeColor1;
                           colorIcon2 = activeColor2;
-                        } 
+                        }
                         resetMapSymbols();
-                                                
+
                         setState(() {});
                       },
                       child: CircleAvatar(
-                        backgroundColor: mapTools['move']! ? backgroundActive : Colors.white,
+                        backgroundColor:
+                            mapTools['move']! ? backgroundActive : Colors.white,
                         child: MoveIcon(
-                          color1: mapTools['move']! ? Colors.white : Colors.grey,
-                          color2: Colors.white
-                        ),
+                            color1:
+                                mapTools['move']! ? Colors.white : Colors.grey,
+                            color2: Colors.white),
                       ),
                     ),
                     const Padding(
                       padding: EdgeInsets.all(4.0),
                     ),
                     GestureDetector(
-                      onTap: () async{
+                      onTap: () async {
                         toggleTool('add');
 
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
 
-                        if (mapTools['add']!){
+                        if (mapTools['add']!) {
                           colorIcon1 = activeColor1;
                           colorIcon2 = activeColor2;
                         }
@@ -547,12 +547,14 @@ void showSnackBar (String txt) {
                         setState(() {});
                       },
                       child: CircleAvatar(
-                        backgroundColor: mapTools['add']! ? backgroundActive : Colors.white,
+                        backgroundColor:
+                            mapTools['add']! ? backgroundActive : Colors.white,
                         child: AddIcon(
-                          color1: mapTools['add']! ? Colors.white : Colors.grey,
-                          color2: colorIcon2!),
+                            color1:
+                                mapTools['add']! ? Colors.white : Colors.grey,
+                            color2: colorIcon2!),
                       ),
-                    ),                
+                    ),
                     const Padding(
                       padding: EdgeInsets.all(4.0),
                     ),
@@ -560,7 +562,7 @@ void showSnackBar (String txt) {
                       onTap: () {
                         removeMapSymbols();
                         toggleTool('delete');
-                        if (mapTools['delete']!){
+                        if (mapTools['delete']!) {
                           mapController!.onSymbolTapped.add(_onSymbolTapped);
                         } else {
                           mapController?.onSymbolTapped.remove(_onSymbolTapped);
@@ -569,25 +571,32 @@ void showSnackBar (String txt) {
                         setState(() {});
                       },
                       child: CircleAvatar(
-                        backgroundColor: mapTools['delete']! ? backgroundActive : Colors.white,
+                        backgroundColor: mapTools['delete']!
+                            ? backgroundActive
+                            : Colors.white,
                         child: DeleteIcon(
-                          color1: mapTools['delete']! ? Colors.white : Colors.grey,
-                          color2: colorIcon2!
-                        ),
+                            color1: mapTools['delete']!
+                                ? Colors.white
+                                : Colors.grey,
+                            color2: colorIcon2!),
                       ),
                     ),
                     const Padding(
                       padding: EdgeInsets.all(4.0),
                     ),
-                    ...[edits.isNotEmpty ? GestureDetector(
-                      onTap: () {
-                        undo();
-                      },
-                      child: const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: UndoIcon(),
-                      ),
-                    ) : Container()],
+                    ...[
+                      edits.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () {
+                                undo();
+                              },
+                              child: const CircleAvatar(
+                                backgroundColor: Colors.white,
+                                child: UndoIcon(),
+                              ),
+                            )
+                          : Container()
+                    ],
                   ],
                 ),
               )
