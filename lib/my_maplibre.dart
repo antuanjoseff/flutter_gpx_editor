@@ -30,8 +30,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     'add': false,
     'delete': false,
   };
-  String trackColor =
-      Colors.pink.toHexStringRGB(); // Selects a mid-range green.
+  double trackWidth = 3;
+  Color trackColor = Colors.pink; // Selects a mid-range green.
   Color defaultColorIcon1 = Colors.grey; // Selects a mid-range green.
   Color defaultColorIcon2 = Colors.grey; // Selects a mid-range green.
 
@@ -377,8 +377,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     trackLine = await mapController!.addLine(
       LineOptions(
         geometry: gpxCoords,
-        lineColor: trackColor,
-        lineWidth: 3,
+        lineColor: trackColor.toHexStringRGB(),
+        lineWidth: trackWidth,
         lineOpacity: 0.9,
       ),
     );
@@ -521,15 +521,25 @@ class _MyMaplibreState extends State<MyMapLibre> {
                             tooltip: 'Change track color',
                             onPressed: () async {
                               // Navigate to page
-                              var (double trackWidth, Color trackColor) =
-                                  await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ColorPickerPage()),
-                              );
+                              var result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ColorPickerPage(
+                                        trackColor: trackColor,
+                                        trackWidth: trackWidth),
+                                  ));
+                              if (result != null) {
+                                var (Color? trColor, double? trWidth) = result;
+                                trackColor = trColor!;
+                                trackWidth = trWidth!;
+                                LineOptions changes = LineOptions(
+                                    lineColor: trackColor.toHexStringRGB(),
+                                    lineWidth: trackWidth);
+                                updateTrack(changes);
+                              }
+
                               print(
-                                  '......................$trackWidth...$trackColor');
+                                  '.POP UP RESULT .....................$result');
                             }),
                       ),
                     ),

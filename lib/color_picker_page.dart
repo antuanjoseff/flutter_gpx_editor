@@ -2,31 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class ColorPickerPage extends StatefulWidget {
-  const ColorPickerPage({super.key});
+  final Color? trackColor;
+  final double? trackWidth;
+
+  const ColorPickerPage({
+    Key? key,
+    required this.trackColor,
+    required this.trackWidth,
+  }) : super(key: key);
 
   @override
   State<ColorPickerPage> createState() => _ColorPickerPageState();
 }
 
 class _ColorPickerPageState extends State<ColorPickerPage> {
-  double trackWidth = 3;
-  Color trackColor = Colors.orange;
+  double? trackWidth;
+  Color? trackColor;
+
+  @override
+  void initState() {
+    trackWidth = widget.trackWidth!;
+    trackColor = widget.trackColor!;
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('COLOR PICKER'),
-        leading: BackButton(
-          onPressed: () {
-Navigator.of(context).pop((
-                trackWidth,
+          title: const Text('COLOR PICKER'),
+          leading: BackButton(
+            onPressed: () {
+              print('on pressed back');
+              Navigator.of(context).pop((
                 trackColor,
-              ));            
-          },
-          
-        )
-      ),
-        
+                trackWidth,
+              ));
+            },
+          )),
       body: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -34,7 +47,7 @@ Navigator.of(context).pop((
         children: [
           // Padding(padding: EdgeInsets.all(4)),
           ColorPicker(
-            pickerColor: trackColor,
+            pickerColor: trackColor!,
             enableAlpha: false,
             labelTypes: const [],
             onColorChanged: (color) {
@@ -45,10 +58,11 @@ Navigator.of(context).pop((
           ),
           const Text('Amplada del track'),
           Slider(
-            value: trackWidth,
-            max: 8,
-            divisions: 10,
-            label: "${trackWidth.round().toString()}",
+            value: trackWidth!,
+            min: 1,
+            max: 15,
+            divisions: 15,
+            label: "${trackWidth!.round().toString()}",
             activeColor: trackColor,
             onChanged: (value) {
               setState(() {
@@ -59,8 +73,8 @@ Navigator.of(context).pop((
           TextButton(
             onPressed: () {
               Navigator.of(context).pop((
-                trackWidth,
                 trackColor,
+                trackWidth,
               ));
             },
             child: const Text('Aplica'),
