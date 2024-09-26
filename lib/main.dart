@@ -8,6 +8,8 @@ import 'dart:io';
 import 'dart:convert' show utf8;
 import 'package:double_back_to_close/double_back_to_close.dart';
 import 'controller.dart';
+import 'color_picker_page.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -78,6 +80,9 @@ class _MyHomePageState extends State<MyHomePage> {
   bool trackLoaded = false;
   List<Wpt> theGpx = [];
 
+  Color? trackColor;
+  double? trackWidth;
+
   @override
   void initState() {
     super.initState();
@@ -88,15 +93,93 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
+  Future<void> _dialogBuilder(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.red),
+                SizedBox(width: 10,),
+                Text('S\'ha produït un error'),
+              ],
+            ),
+          ),
+          content: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Format d\'arxiu no suportat'
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                textStyle: Theme.of(context).textTheme.labelLarge,
+              ),
+              child: const Text('Accept'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),            
+          ],
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.pink,
         // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text(
-          'GPX',
-          style: TextStyle(color: Colors.white),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+          GestureDetector(
+            child: 
+            IconButton(
+              icon: const Icon(Icons.folder, color: Colors.white, ),
+              tooltip: 'Open file',
+              onPressed: () async {
+                FilePickerResult? result = await FilePicker.platform.pickFiles();
+            
+                if (result != null) {
+                  filename = result.files.single.path!.toString();
+                  fileName = result.files.single.name.toString();
+            
+                  try {
+                    final stream =
+                      await utf8.decoder.bind(File(filename!).openRead()).join();
+                    gpxOriginal = await GeoXml.fromGpxString(stream);
+                    lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
+                    await _controller.removeTrackLine!;
+                    await _controller.loadTrack!(lineSegment);
+                    await _controller.addMapSymbols!;
+            
+                    setState(() {
+                      trackLoaded = true;
+                    });                  
+                  } on Exception catch (e) {
+                    _dialogBuilder(context);
+                  } 
+            
+                } else {
+                  // User canceled the picker
+                }
+              },
+            ),
+          ),            
+            const Text(
+              'GPX Editor',
+              style: TextStyle(color: Colors.white, fontSize: 20),
+            ),
+          ],
         ),
         actions: [
           ...[
@@ -163,35 +246,44 @@ class _MyHomePageState extends State<MyHomePage> {
                   )
                 : Container()
           ],
-          IconButton(
-            icon: const Icon(Icons.folder, color: Colors.white),
-            tooltip: 'Show Snackbar',
-            onPressed: () async {
-              FilePickerResult? result = await FilePicker.platform.pickFiles();
+          ...[
+            trackLoaded
+                ? CircleAvatar(
+                    backgroundColor:Colors.transparent,
+                    child: IconButton(
+                      icon: const Icon(Icons.settings,
+                          color: Colors.white),
+                      tooltip: 'Show Snackbar',
+                      onPressed: () async {
+                        editMode = false;
+                        _controller.removeMapSymbols!();
+                        _controller.hideEditIcons!();
+                      
+                        var result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ColorPickerPage(
+                                  trackColor: trackColor,
+                                  trackWidth: trackWidth),
+                            ));
+                        if (result != null) {
+                          var (Color? trColor, double? trWidth) = result;
+                          trackColor = trColor!;
+                          trackWidth = trWidth!;
+                          LineOptions changes = LineOptions(
+                              lineColor: trackColor!.toHexStringRGB(),
+                              lineWidth: trackWidth);
 
-              if (result != null) {
-                filename = result.files.single.path!.toString();
-                fileName = result.files.single.name.toString();
+                          _controller.updateTrack!(changes);
+                        }
 
-                // TO DO. Check for invalid file format
-                final stream =
-                    await utf8.decoder.bind(File(filename!).openRead()).join();
-
-                gpxOriginal = await GeoXml.fromGpxString(stream);
-
-                lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-                await _controller.removeTrackLine!;
-                await _controller.loadTrack!(lineSegment);
-                await _controller.addMapSymbols!;
-
-                setState(() {
-                  trackLoaded = true;
-                });
-              } else {
-                // User canceled the picker
-              }
-            },
-          ),
+                        setState(() {});
+                      },
+                    ),
+                  )
+                : Container()
+          ],
+                  
         ],
       ),
       body: MyMapLibre(scaffoldKey: _scaffoldKey, controller: _controller),

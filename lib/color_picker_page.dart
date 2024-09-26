@@ -21,8 +21,8 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
 
   @override
   void initState() {
-    trackWidth = widget.trackWidth!;
-    trackColor = widget.trackColor!;
+    trackWidth = widget.trackWidth ?? 3;
+    trackColor = widget.trackColor ?? Colors.pink;
     super.initState();
   }
 

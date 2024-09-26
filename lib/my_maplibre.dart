@@ -82,6 +82,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.removeMapSymbols = removeMapSymbols;
     controller.showEditIcons = showEditIcons;
     controller.hideEditIcons = hideEditIcons;
+    controller.updateTrack = updateTrack;
     controller.getGpx = () {
       return rawGpx;
     };
@@ -119,10 +120,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
     // mapController!.onSymbolTapped.add(_onSymbolTapped);
-    mapController!.onFeatureDrag.add(_onNodeDrag);
+    // mapController!.onFeatureDrag.add(_onNodeDrag);
   }
 
   void addNode(point, clickedPoint) async {
+    print(gpxCoords.isEmpty);
+    print('mapTools[add] .........${mapTools['add']}');
     if (gpxCoords.isEmpty || !mapTools['add']!) return;
 
     Stopwatch stopwatch = new Stopwatch()..start();
@@ -164,11 +167,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
       SnackBar(
         content: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.warning_rounded,
               color: Colors.white,
             ),
-            SizedBox(width: 20),
+            const SizedBox(width: 20),
             Expanded(child: Text(txt)),
           ],
         ),
@@ -343,7 +346,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   @override
   void dispose() {
-    mapController!.onFeatureDrag.remove(_onNodeDrag);
+    if (mapController!.onFeatureDrag.isNotEmpty) {
+      mapController!.onFeatureDrag.remove(_onNodeDrag);  
+    }
     super.dispose();
   }
 
@@ -510,43 +515,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
                 child: Column(
                   children: [
                     GestureDetector(
-                      onTap: () {},
-                      child: CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: IconButton(
-                            icon: const Icon(
-                              Icons.palette,
-                              color: Colors.grey,
-                            ),
-                            tooltip: 'Change track color',
-                            onPressed: () async {
-                              // Navigate to page
-                              var result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ColorPickerPage(
-                                        trackColor: trackColor,
-                                        trackWidth: trackWidth),
-                                  ));
-                              if (result != null) {
-                                var (Color? trColor, double? trWidth) = result;
-                                trackColor = trColor!;
-                                trackWidth = trWidth!;
-                                LineOptions changes = LineOptions(
-                                    lineColor: trackColor.toHexStringRGB(),
-                                    lineWidth: trackWidth);
-                                updateTrack(changes);
-                              }
-
-                              print(
-                                  '.POP UP RESULT .....................$result');
-                            }),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(2.0),
-                    ),
-                    GestureDetector(
                       onTap: () async {
                         print('------------------------${mapTools['move']}');
                         toggleTool('move');
@@ -557,6 +525,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         if (mapTools['move']!) {
                           colorIcon1 = activeColor1;
                           colorIcon2 = activeColor2;
+                          mapController!.onFeatureDrag.add(_onNodeDrag);
+                        } else {
+                          mapController!.onFeatureDrag.remove(_onNodeDrag);
                         }
                         resetMapSymbols();
 

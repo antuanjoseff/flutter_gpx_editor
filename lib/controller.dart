@@ -9,4 +9,5 @@ class Controller {
   List<Wpt> Function()? getGpx;
   void Function()? showEditIcons;
   void Function()? hideEditIcons;
+  Future<void> Function(LineOptions changes)? updateTrack;
 }
