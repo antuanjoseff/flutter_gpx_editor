@@ -96,7 +96,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     super.initState();
     WidgetsBinding.instance
       .addPostFrameCallback((_){
-        backgroundActive = Theme.of(context).primaryColor;
+        backgroundActive = Theme.of(context).canvasColor;
       });
 
     

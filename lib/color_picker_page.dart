@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-              
+
 class ColorPickerPage extends StatefulWidget {
   final Color? trackColor;
   final double? trackWidth;
@@ -30,8 +30,10 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).secondaryHeaderColor,
       appBar: AppBar(
           title: Text(AppLocalizations.of(context)!.trackSettings),
+          backgroundColor: Theme.of(context).secondaryHeaderColor,
           leading: BackButton(
             onPressed: () {
               print('on pressed back');
@@ -47,17 +49,51 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Padding(padding: EdgeInsets.all(4)),
-          ColorPicker(
-            pickerColor: trackColor!,
-            enableAlpha: false,
-            labelTypes: const [],
-            onColorChanged: (color) {
-              setState(() {
-                trackColor = color;
-              });
-            },
+          // ColorPicker(
+          //   pickerColor: trackColor!,
+          //   enableAlpha: false,
+          //   labelTypes: const [],
+          //   onColorChanged: (color) {
+          //     setState(() {
+          //       trackColor = color;
+          //     });
+          //   },
+          // ),
+          const Padding(padding: EdgeInsets.only(top: 12)),
+          Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+            const SizedBox(
+              width: 20,
+            ),
+            Text(
+              AppLocalizations.of(context)!.trackColor,
+              style: TextStyle(fontSize: 20),
+            ),
+          ]),
+          SizedBox(
+            width: 200,
+            height: 200,
+            child: BlockPicker(
+              pickerColor: trackColor,
+              onColorChanged: (color) {
+                setState(() {
+                  trackColor = color;
+                });
+              },
+            ),
           ),
-          Text(AppLocalizations.of(context)!.trackWidth),
+          const Padding(padding: EdgeInsets.only(top: 12)),
+          Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const SizedBox(
+                  width: 20,
+                ),
+                Text(
+                  AppLocalizations.of(context)!.trackWidth,
+                  style: TextStyle(fontSize: 20),
+                ),
+              ]),
           Slider(
             value: trackWidth!,
             min: 1,
@@ -71,7 +107,10 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
               });
             },
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).canvasColor,
+                foregroundColor: Colors.white),
             onPressed: () {
               Navigator.of(context).pop((
                 trackColor,

@@ -4,7 +4,8 @@
     "fileFormatNotSupported": "Formato de archivo no soportado",
     "accept": "Acceptar",
     "trackSettings": "Configuración",
-    "trackWidth": "Grosor",
+    "trackColor": "Color:",
+    "trackWidth": "Grosor:",
     "apply": "Aplicar",
     "nodeToAddIsToFar": "El punto seleccionado está demasiado alejado del track. Haz zoom y inténtalo de nuevo"
 }

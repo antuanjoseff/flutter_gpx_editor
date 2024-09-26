@@ -32,7 +32,8 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        canvasColor: Colors.pink,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.pink),
         useMaterial3: true,
       ),
       localizationsDelegates: const [
@@ -150,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).canvasColor,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Row(
