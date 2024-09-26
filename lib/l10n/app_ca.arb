@@ -1,0 +1,9 @@
+{
+    "appTitle": "Editor GPX",
+    "errorOpeningFile": "Error d'arxiu",
+    "fileFormatNotSupported": "Format d'arxiu no suportat",
+    "accept": "Acceptar",
+    "trackSettings": "Configuració",
+    "trackWidth": "Amplada",
+    "apply": "Aplicar"
+}

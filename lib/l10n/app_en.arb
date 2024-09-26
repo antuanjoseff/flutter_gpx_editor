@@ -1,0 +1,12 @@
+{
+  "appTitle": "GPX Editor",
+  "@appTitle": {
+    "description": "App title"
+  },
+  "errorOpeningFile": "Error opening file",
+  "fileFormatNotSupported": "File format not supported",
+  "accept": "Accept",
+  "trackSettings": "Track settings",
+  "trackWidth": "Track width",
+  "apply": "Apply"
+}

@@ -9,7 +9,8 @@ import 'dart:convert' show utf8;
 import 'package:double_back_to_close/double_back_to_close.dart';
 import 'controller.dart';
 import 'color_picker_page.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 void main() {
   runApp(MyApp());
@@ -27,12 +28,24 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      localizationsDelegates: const [
+        AppLocalizations.delegate, // Add this line
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ca'), // catalan
+        Locale('es'), // Spanish
+        Locale('en'), // English
+      ],
       home: DoubleBack(
         condition: allowClose,
         onConditionFail: () {
@@ -98,21 +111,22 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const FittedBox(
+          title: FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
               children: [
                 Icon(Icons.warning, color: Colors.red),
                 SizedBox(width: 10,),
-                Text('S\'ha produït un error'),
+                Text(AppLocalizations.of(context)!.errorOpeningFile),
+                
               ],
             ),
           ),
-          content: const Row(
+          content: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Format d\'arxiu no suportat'
+                AppLocalizations.of(context)!.fileFormatNotSupported,
               ),
             ],
           ),
@@ -121,7 +135,7 @@ class _MyHomePageState extends State<MyHomePage> {
               style: TextButton.styleFrom(
                 textStyle: Theme.of(context).textTheme.labelLarge,
               ),
-              child: const Text('Accept'),
+              child: Text(AppLocalizations.of(context)!.accept),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -175,9 +189,9 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           ),            
-            const Text(
-              'GPX Editor',
-              style: TextStyle(color: Colors.white, fontSize: 20),
+            Text(
+              AppLocalizations.of(context)!.appTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 20),
             ),
           ],
         ),

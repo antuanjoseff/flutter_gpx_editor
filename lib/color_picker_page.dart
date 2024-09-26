@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+              
 class ColorPickerPage extends StatefulWidget {
   final Color? trackColor;
   final double? trackWidth;
@@ -30,7 +31,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('COLOR PICKER'),
+          title: Text(AppLocalizations.of(context)!.trackSettings),
           leading: BackButton(
             onPressed: () {
               print('on pressed back');
@@ -56,7 +57,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
               });
             },
           ),
-          const Text('Amplada del track'),
+          Text(AppLocalizations.of(context)!.trackWidth),
           Slider(
             value: trackWidth!,
             min: 1,
@@ -77,7 +78,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                 trackWidth,
               ));
             },
-            child: const Text('Aplica'),
+            child: Text(AppLocalizations.of(context)!.apply),
           ),
         ],
       ),
