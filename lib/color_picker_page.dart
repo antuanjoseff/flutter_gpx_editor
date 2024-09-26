@@ -71,7 +71,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
           ]),
           SizedBox(
             width: 200,
-            height: 200,
+            height: 300,
             child: BlockPicker(
               pickerColor: trackColor,
               onColorChanged: (color) {

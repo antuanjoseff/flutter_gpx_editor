@@ -13,7 +13,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final Controller controller;
-  
+
   const MyMapLibre({
     Key? key,
     required this.scaffoldKey,
@@ -44,7 +44,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Color? colorIcon1;
   Color? colorIcon2;
   Color? backgroundColor;
-  
+
   MapLibreMapController? mapController;
 
   Line? trackLine;
@@ -71,7 +71,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   int selectedNode = -1;
   String selectedNodeType = '';
-  
+
   final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
   final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
@@ -92,14 +92,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void initState() {
     colorIcon1 = defaultColorIcon1;
     colorIcon2 = defaultColorIcon2;
-    backgroundColor = backgroundInactive;    
+    backgroundColor = backgroundInactive;
     super.initState();
-    WidgetsBinding.instance
-      .addPostFrameCallback((_){
-        backgroundActive = Theme.of(context).canvasColor;
-      });
-
-    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      backgroundActive = Theme.of(context).canvasColor;
+    });
   }
 
   void deactivateTools() {
@@ -178,11 +175,15 @@ class _MyMaplibreState extends State<MyMapLibre> {
               color: Theme.of(context).primaryColor,
             ),
             const SizedBox(width: 20),
-            Expanded(child: Text(txt, style: TextStyle(color: Theme.of(context).primaryColor),)),
+            Expanded(
+                child: Text(
+              txt,
+              style: TextStyle(color: Theme.of(context).primaryColor),
+            )),
           ],
         ),
         backgroundColor: Theme.of(context).secondaryHeaderColor,
-        duration: const Duration(milliseconds: 1500),
+        duration: const Duration(milliseconds: 3000),
       ),
     );
   }
@@ -353,7 +354,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   @override
   void dispose() {
     if (mapController!.onFeatureDrag.isNotEmpty) {
-      mapController!.onFeatureDrag.remove(_onNodeDrag);  
+      mapController!.onFeatureDrag.remove(_onNodeDrag);
     }
     super.dispose();
   }
@@ -508,7 +509,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
         },
         initialCameraPosition: const CameraPosition(
           target: LatLng(42.0, 3.0),
-          zoom: 13.0,
+          zoom: 0,
         ),
         styleString:
             'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
