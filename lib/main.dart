@@ -32,7 +32,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
       localizationsDelegates: const [
@@ -150,7 +150,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.pink,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -200,7 +201,7 @@ class _MyHomePageState extends State<MyHomePage> {
             trackLoaded
                 ? CircleAvatar(
                     backgroundColor:
-                        editMode ? Colors.white : Colors.transparent,
+                        editMode ? Theme.of(context).secondaryHeaderColor : Colors.transparent,
                     child: IconButton(
                       icon: Icon(Icons.edit,
                           color: editMode ? Colors.pink : Colors.white),

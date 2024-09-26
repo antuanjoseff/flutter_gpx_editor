@@ -5,5 +5,6 @@
     "accept": "Acceptar",
     "trackSettings": "Configuració",
     "trackWidth": "Amplada",
-    "apply": "Aplicar"
+    "apply": "Aplicar",
+    "nodeToAddIsToFar": "El punt seleccionat està massa lluny del track. Fes zoom i torna-ho a provar"
 }

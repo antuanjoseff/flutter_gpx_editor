@@ -8,5 +8,6 @@
   "accept": "Accept",
   "trackSettings": "Track settings",
   "trackWidth": "Track width",
-  "apply": "Apply"
+  "apply": "Apply",
+  "nodeToAddIsToFar": "Selected point is too far from track. Zoom in and try again"
 }

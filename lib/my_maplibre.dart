@@ -8,12 +8,12 @@ import 'add_icon.dart';
 import 'undo_icon.dart';
 import 'package:throttling/throttling.dart';
 import 'util.dart';
-import 'color_picker_page.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final Controller controller;
-
+  
   const MyMapLibre({
     Key? key,
     required this.scaffoldKey,
@@ -38,13 +38,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Color activeColor1 = Colors.grey; // Selects a mid-range green.
   Color activeColor2 = Colors.white; // Selects a mid-range green.
 
+  Color? backgroundActive;
   Color backgroundInactive = Colors.white;
-  Color backgroundActive = Colors.pink;
 
   Color? colorIcon1;
   Color? colorIcon2;
   Color? backgroundColor;
-
+  
   MapLibreMapController? mapController;
 
   Line? trackLine;
@@ -71,7 +71,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   int selectedNode = -1;
   String selectedNodeType = '';
-
+  
   final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
   final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
@@ -92,8 +92,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void initState() {
     colorIcon1 = defaultColorIcon1;
     colorIcon2 = defaultColorIcon2;
-    backgroundColor = backgroundInactive;
+    backgroundColor = backgroundInactive;    
     super.initState();
+    WidgetsBinding.instance
+      .addPostFrameCallback((_){
+        backgroundActive = Theme.of(context).primaryColor;
+      });
+
+    
   }
 
   void deactivateTools() {
@@ -158,7 +164,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       setState(() {});
     } else {
       // Show snalbar message
-      showSnackBar('El node seleccionat està masss lluny del track');
+      showSnackBar(AppLocalizations.of(context)!.nodeToAddIsToFar);
     }
   }
 
@@ -167,15 +173,15 @@ class _MyMaplibreState extends State<MyMapLibre> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.warning_rounded,
-              color: Colors.white,
+              color: Theme.of(context).primaryColor,
             ),
             const SizedBox(width: 20),
-            Expanded(child: Text(txt)),
+            Expanded(child: Text(txt, style: TextStyle(color: Theme.of(context).primaryColor),)),
           ],
         ),
-        backgroundColor: Colors.purple,
+        backgroundColor: Theme.of(context).secondaryHeaderColor,
         duration: const Duration(milliseconds: 1500),
       ),
     );
