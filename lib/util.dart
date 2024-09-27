@@ -4,6 +4,7 @@ import 'package:geoxml/geoxml.dart';
 import 'dart:math';
 import 'dart:core';
 import 'dart:async';
+import 'package:flutter/material.dart';
 
 /// Adds an asset image to the currently displayed style
 Future<void> addImageFromAsset(
@@ -164,7 +165,6 @@ double deg2rad(double deg) {
   return deg / 180.0 * pi;
 }
 
-
 double getDistanceFromLatLonInMeters(LatLng origin, LatLng target) {
   double lat1 = origin.latitude;
   double lat2 = target.latitude;
@@ -172,14 +172,11 @@ double getDistanceFromLatLonInMeters(LatLng origin, LatLng target) {
   double lon2 = target.longitude;
 
   int R = 6371; // Radius of the earth in km
-  double dLat = deg2rad(lat2-lat1);  // deg2rad below
-  double dLon = deg2rad(lon2-lon1); 
-  double a = 
-    sin(dLat/2) * sin(dLat/2) +
-    cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * 
-    sin(dLon/2) * sin(dLon/2)
-    ; 
-  double c = 2 * atan2(sqrt(a), sqrt(1-a)); 
+  double dLat = deg2rad(lat2 - lat1); // deg2rad below
+  double dLon = deg2rad(lon2 - lon1);
+  double a = sin(dLat / 2) * sin(dLat / 2) +
+      cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
+  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
   double d = R * c; // Distance in km
   return d * 1000; //distance in meters
 }
@@ -187,4 +184,27 @@ double getDistanceFromLatLonInMeters(LatLng origin, LatLng target) {
 setTimeout(callback, time) {
   Duration timeDelay = Duration(milliseconds: time);
   return Timer(timeDelay, callback);
+}
+
+void showSnackBar(context, String txt) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          Icon(
+            Icons.warning_rounded,
+            color: Theme.of(context).primaryColor,
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+              child: Text(
+            txt,
+            style: TextStyle(color: Theme.of(context).primaryColor),
+          )),
+        ],
+      ),
+      backgroundColor: Theme.of(context).secondaryHeaderColor,
+      duration: const Duration(milliseconds: 3000),
+    ),
+  );
 }

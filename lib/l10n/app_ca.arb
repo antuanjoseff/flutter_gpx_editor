@@ -2,6 +2,7 @@
     "appTitle": "Editor GPX",
     "errorOpeningFile": "Error d'arxiu",
     "fileFormatNotSupported": "Format d'arxiu no suportat",
+    "onEditFirstTrackSegment": "Només es mostra el primer segment del track",
     "accept": "Acceptar",
     "trackSettings": "Configuració",
     "trackColor": "Color:",

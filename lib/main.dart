@@ -11,6 +11,7 @@ import 'controller.dart';
 import 'color_picker_page.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'util.dart';
 
 void main() {
   runApp(MyApp());
@@ -28,7 +29,6 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -109,42 +109,42 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _dialogBuilder(BuildContext context) {
     return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.red),
+                  SizedBox(
+                    width: 10,
+                  ),
+                  Text(AppLocalizations.of(context)!.errorOpeningFile),
+                ],
+              ),
+            ),
+            content: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.warning, color: Colors.red),
-                SizedBox(width: 10,),
-                Text(AppLocalizations.of(context)!.errorOpeningFile),
-                
+                Text(
+                  AppLocalizations.of(context)!.fileFormatNotSupported,
+                ),
               ],
             ),
-          ),
-          content: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                AppLocalizations.of(context)!.fileFormatNotSupported,
+            actions: <Widget>[
+              TextButton(
+                style: TextButton.styleFrom(
+                  textStyle: Theme.of(context).textTheme.labelLarge,
+                ),
+                child: Text(AppLocalizations.of(context)!.accept),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
               ),
             ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              style: TextButton.styleFrom(
-                textStyle: Theme.of(context).textTheme.labelLarge,
-              ),
-              child: Text(AppLocalizations.of(context)!.accept),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),            
-          ],
-        );
-      }
-    );
+          );
+        });
   }
 
   @override
@@ -157,40 +157,49 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-          GestureDetector(
-            child: 
-            IconButton(
-              icon: const Icon(Icons.folder, color: Colors.white, ),
-              tooltip: 'Open file',
-              onPressed: () async {
-                FilePickerResult? result = await FilePicker.platform.pickFiles();
-            
-                if (result != null) {
-                  filename = result.files.single.path!.toString();
-                  fileName = result.files.single.name.toString();
-            
-                  try {
-                    final stream =
-                      await utf8.decoder.bind(File(filename!).openRead()).join();
-                    gpxOriginal = await GeoXml.fromGpxString(stream);
-                    lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-                    await _controller.removeTrackLine!;
-                    await _controller.loadTrack!(lineSegment);
-                    await _controller.addMapSymbols!;
-            
-                    setState(() {
-                      trackLoaded = true;
-                    });                  
-                  } on Exception catch (e) {
-                    _dialogBuilder(context);
-                  } 
-            
-                } else {
-                  // User canceled the picker
-                }
-              },
+            GestureDetector(
+              child: IconButton(
+                icon: const Icon(
+                  Icons.folder,
+                  color: Colors.white,
+                ),
+                tooltip: 'Open file',
+                onPressed: () async {
+                  FilePickerResult? result =
+                      await FilePicker.platform.pickFiles();
+
+                  if (result != null) {
+                    filename = result.files.single.path!.toString();
+                    fileName = result.files.single.name.toString();
+
+                    try {
+                      final stream = await utf8.decoder
+                          .bind(File(filename!).openRead())
+                          .join();
+                      gpxOriginal = await GeoXml.fromGpxString(stream);
+                      if (gpxOriginal!.trks[0].trksegs.length >= 1) {
+                        showSnackBar(
+                          context,
+                          AppLocalizations.of(context)!.onEditFirstTrackSegment,
+                        );
+                      }
+                      lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
+                      await _controller.removeTrackLine!;
+                      await _controller.loadTrack!(lineSegment);
+                      await _controller.addMapSymbols!;
+
+                      setState(() {
+                        trackLoaded = true;
+                      });
+                    } on Exception catch (e) {
+                      _dialogBuilder(context);
+                    }
+                  } else {
+                    // User canceled the picker
+                  }
+                },
+              ),
             ),
-          ),            
             Text(
               AppLocalizations.of(context)!.appTitle,
               style: const TextStyle(color: Colors.white, fontSize: 20),
@@ -201,8 +210,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ...[
             trackLoaded
                 ? CircleAvatar(
-                    backgroundColor:
-                        editMode ? Theme.of(context).secondaryHeaderColor : Colors.transparent,
+                    backgroundColor: editMode
+                        ? Theme.of(context).secondaryHeaderColor
+                        : Colors.transparent,
                     child: IconButton(
                       icon: Icon(Icons.edit,
                           color: editMode ? Colors.pink : Colors.white),
@@ -265,16 +275,15 @@ class _MyHomePageState extends State<MyHomePage> {
           ...[
             trackLoaded
                 ? CircleAvatar(
-                    backgroundColor:Colors.transparent,
+                    backgroundColor: Colors.transparent,
                     child: IconButton(
-                      icon: const Icon(Icons.settings,
-                          color: Colors.white),
+                      icon: const Icon(Icons.settings, color: Colors.white),
                       tooltip: 'Show Snackbar',
                       onPressed: () async {
                         editMode = false;
                         _controller.removeMapSymbols!();
                         _controller.hideEditIcons!();
-                      
+
                         var result = await Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -299,7 +308,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   )
                 : Container()
           ],
-                  
         ],
       ),
       body: MyMapLibre(scaffoldKey: _scaffoldKey, controller: _controller),

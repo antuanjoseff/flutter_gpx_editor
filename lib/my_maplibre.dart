@@ -161,31 +161,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
       setState(() {});
     } else {
       // Show snalbar message
-      showSnackBar(AppLocalizations.of(context)!.nodeToAddIsToFar);
+      showSnackBar(context, AppLocalizations.of(context)!.nodeToAddIsToFar);
     }
-  }
-
-  void showSnackBar(String txt) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              Icons.warning_rounded,
-              color: Theme.of(context).primaryColor,
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-                child: Text(
-              txt,
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            )),
-          ],
-        ),
-        backgroundColor: Theme.of(context).secondaryHeaderColor,
-        duration: const Duration(milliseconds: 3000),
-      ),
-    );
   }
 
   void deleteNode() async {

@@ -5,6 +5,7 @@
   },
   "errorOpeningFile": "Error opening file",
   "fileFormatNotSupported": "File format not supported",
+  "onEditFirstTrackSegment": "Only first track segment is shown",
   "accept": "Accept",
   "trackSettings": "Track settings",
   "trackColor": "Track:",
