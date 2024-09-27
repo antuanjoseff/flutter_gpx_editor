@@ -9,6 +9,7 @@ import 'undo_icon.dart';
 import 'package:throttling/throttling.dart';
 import 'util.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -514,116 +515,77 @@ class _MyMaplibreState extends State<MyMapLibre> {
         styleString:
             'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
       ),
-      ...[
-        showTools
-            ? Positioned(
-                right: 10,
-                top: 10,
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        print('------------------------${mapTools['move']}');
-                        toggleTool('move');
-                        print('------------------------${mapTools['move']}');
-                        colorIcon1 = defaultColorIcon1;
-                        colorIcon2 = defaultColorIcon2;
-
-                        if (mapTools['move']!) {
-                          colorIcon1 = activeColor1;
-                          colorIcon2 = activeColor2;
-                          mapController!.onFeatureDrag.add(_onNodeDrag);
-                        } else {
-                          mapController!.onFeatureDrag.remove(_onNodeDrag);
-                        }
-                        resetMapSymbols();
-
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                        backgroundColor:
-                            mapTools['move']! ? backgroundActive : Colors.white,
-                        child: MoveIcon(
-                            color1:
-                                mapTools['move']! ? Colors.white : Colors.grey,
-                            color2: Colors.white),
+      Positioned.fill(
+          right: 10,
+          top: 10,
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                ElevatedButton(
+                  onPressed: () {},
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/icons/node_move.svg',
+                        semanticsLabel: 'My SVG Image',
+                        height: 40,
+                        width: 40,
                       ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(2.0),
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        toggleTool('add');
-
-                        colorIcon1 = defaultColorIcon1;
-                        colorIcon2 = defaultColorIcon2;
-
-                        if (mapTools['add']!) {
-                          colorIcon1 = activeColor1;
-                          colorIcon2 = activeColor2;
-                        }
-
-                        removeMapSymbols();
-                        await addMapSymbols();
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                        backgroundColor:
-                            mapTools['add']! ? backgroundActive : Colors.white,
-                        child: AddIcon(
-                            color1:
-                                mapTools['add']! ? Colors.white : Colors.grey,
-                            color2: colorIcon2!),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(2.0),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        removeMapSymbols();
-                        toggleTool('delete');
-                        if (mapTools['delete']!) {
-                          mapController!.onSymbolTapped.add(_onSymbolTapped);
-                        } else {
-                          mapController?.onSymbolTapped.remove(_onSymbolTapped);
-                        }
-                        addMapSymbols();
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                        backgroundColor: mapTools['delete']!
-                            ? backgroundActive
-                            : Colors.white,
-                        child: DeleteIcon(
-                            color1: mapTools['delete']!
-                                ? Colors.white
-                                : Colors.grey,
-                            color2: colorIcon2!),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(4.0),
-                    ),
-                    ...[
-                      edits.isNotEmpty
-                          ? GestureDetector(
-                              onTap: () {
-                                undo();
-                              },
-                              child: const CircleAvatar(
-                                backgroundColor: Colors.white,
-                                child: UndoIcon(),
-                              ),
-                            )
-                          : Container()
+                      Text('Mou')
                     ],
-                  ],
+                  ),
                 ),
-              )
-            : Container(),
-      ],
+                ElevatedButton(
+                  onPressed: () {},
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/icons/node_move.svg',
+                        semanticsLabel: 'My SVG Image',
+                        height: 40,
+                        width: 40,
+                      ),
+                      Text('Mou')
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {},
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/icons/node_move.svg',
+                        semanticsLabel: 'My SVG Image',
+                        height: 40,
+                        width: 40,
+                      ),
+                      Text('Mou')
+                    ],
+                  ),
+                ),
+                Icon(Icons.settings, color: Colors.green),
+                Expanded(
+                    child: Container(
+                        child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.settings, color: Colors.red),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(20),
+                    )
+                  ],
+                ))),
+              ])),
     ]);
   }
 }

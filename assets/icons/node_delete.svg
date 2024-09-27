@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="35mm"
+   height="30mm"
+   viewBox="0 0 35 30"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="node_delete.svg"
+   inkscape:version="1.3.1 (9b9bdc1480, 2023-11-25, custom)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="4.5052463"
+     inkscape:cx="78.57506"
+     inkscape:cy="70.806339"
+     inkscape:window-width="1846"
+     inkscape:window-height="1136"
+     inkscape:window-x="74"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect1"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect1-7"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect1-7-2"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect1-7-0"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect1-7-6"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect1-7-6-7"
+       is_visible="true"
+       lpeversion="1" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:#ff0042;fill-opacity:0.976471;stroke:#bbbbbb;stroke-width:2.51027;stroke-dasharray:none;stroke-opacity:0.976471"
+       d="m 39.704814,140.8164 79.353586,0.20872"
+       id="path1-3"
+       inkscape:path-effect="#path-effect1-7"
+       inkscape:original-d="m 39.704814,140.8164 79.353586,0.20872"
+       transform="matrix(0.11674184,0,0,0.50264606,19.552601,-56.257384)" />
+    <g
+       id="g2"
+       transform="rotate(43.584509,34.792919,5.2609726)"
+       inkscape:transform-center-x="-11.640903"
+       inkscape:transform-center-y="8.9441257">
+      <path
+         style="fill:#ff0042;fill-opacity:0.976471;stroke:#bbbbbb;stroke-width:2.51027;stroke-dasharray:none;stroke-opacity:0.976471"
+         d="m 39.704814,140.8164 79.353586,0.20872"
+         id="path1-3-6"
+         inkscape:path-effect="#path-effect1-7-6"
+         inkscape:original-d="m 39.704814,140.8164 79.353586,0.20872"
+         transform="matrix(0.11674184,0,0,0.50264606,19.706839,-46.866583)" />
+      <path
+         style="fill:#ff0042;fill-opacity:0.976471;stroke:#bbbbbb;stroke-width:2.51027;stroke-dasharray:none;stroke-opacity:0.976471"
+         d="m 39.704814,140.8164 79.353586,0.20872"
+         id="path1-3-6-2"
+         inkscape:path-effect="#path-effect1-7-6-7"
+         inkscape:original-d="m 39.704814,140.8164 79.353586,0.20872"
+         transform="matrix(0.00404469,0.11667175,-0.50234429,0.01741489,99.443659,12.25097)" />
+    </g>
+    <path
+       style="fill:#ff0042;fill-opacity:0.976471;stroke:#bbbbbb;stroke-width:2.51027;stroke-dasharray:none;stroke-opacity:0.976471"
+       d="m 39.704814,140.8164 79.353586,0.20872"
+       id="path1-3-3"
+       inkscape:path-effect="#path-effect1-7-0"
+       inkscape:original-d="m 39.704814,140.8164 79.353586,0.20872"
+       transform="matrix(0.11674184,0,0,0.50264606,-3.1048778,-56.193041)" />
+    <rect
+       style="fill:#000000;fill-opacity:0;stroke:#ababab;stroke-width:0.655274;stroke-dasharray:none;stroke-opacity:0.976471"
+       id="rect2"
+       width="13.284548"
+       height="15.307716"
+       x="10.89129"
+       y="7.0577202" />
+  </g>
+</svg>
