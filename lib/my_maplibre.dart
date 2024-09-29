@@ -9,6 +9,7 @@ import 'undo_icon.dart';
 import 'package:throttling/throttling.dart';
 import 'util.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'classes/track.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -25,11 +26,13 @@ class MyMapLibre extends StatefulWidget {
 }
 
 class _MyMaplibreState extends State<MyMapLibre> {
+  Track? track;
   Map<String, bool> mapTools = {
     'move': false,
     'add': false,
     'delete': false,
   };
+
   double trackWidth = 3;
   Color trackColor = Colors.pink; // Selects a mid-range green.
   Color defaultColorIcon1 = Colors.grey; // Selects a mid-range green.
@@ -52,15 +55,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
 
   bool editMode = true;
-  List<Wpt> rawGpx = [];
-  List<LatLng> nodes = [];
-  List<LatLng> gpxCoords = [];
+
   List<(int, Wpt, String)> edits = [];
 
   String? filename;
   String? fileName;
 
-  GeoXml? gpxOriginal;
   bool gpxLoaded = false;
   bool showTools = false;
   // bool draggableMode = false;
@@ -84,7 +84,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.hideEditIcons = hideEditIcons;
     controller.updateTrack = updateTrack;
     controller.getGpx = () {
-      return rawGpx;
+      return track!.getTrack();
     };
   }
 
@@ -127,34 +127,22 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void addNode(point, clickedPoint) async {
-    print(gpxCoords.isEmpty);
-    print('mapTools[add] .........${mapTools['add']}');
-    if (gpxCoords.isEmpty || !mapTools['add']!) return;
+    if (track!.getCoordsList().isEmpty || !mapTools['add']!) return;
+    var (dist, position, P) = track!.getCandidateNode(clickedPoint);
 
-    Stopwatch stopwatch = new Stopwatch()..start();
-    int segment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
-    print('Closest at ($segment) executed in ${stopwatch.elapsed}');
-
-    LatLng P = projectionPoint(
-        gpxCoords[segment], gpxCoords[segment + 1], clickedPoint);
-
-    double dist = getDistanceFromLatLonInMeters(clickedPoint, P);
-    print('....................$dist');
     if (dist < 20) {
       Symbol added = await mapController!.addSymbol(SymbolOptions(
           draggable: false, iconImage: 'node-plain', geometry: P));
 
-      mapSymbols.insert(segment + 1, added);
-      nodes.insert(segment + 1, P);
+      mapSymbols.insert(position + 1, added);
 
-      gpxCoords.insert(segment + 1, P);
-      Wpt newWpt =
-          cloneWpt(halfSegmentWpt(rawGpx[segment], rawGpx[segment + 1]));
+      Wpt newWpt = cloneWpt(halfSegmentWpt(
+          track!.trackSegment[position], track!.trackSegment[position + 1]));
       newWpt.lat = P.latitude;
       newWpt.lon = P.longitude;
-      edits.add((segment + 1, newWpt, 'add'));
-      print(edits);
-      rawGpx.insert(segment + 1, newWpt);
+      edits.add((position + 1, newWpt, 'add'));
+
+      track!.addNode(position, newWpt);
 
       updateTrackLine();
       resetMapSymbols();
@@ -165,27 +153,16 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
-  void deleteNode() async {
-    if (selectedNode == -1) return;
-    edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'delete'));
-    nodes.removeAt(selectedNode);
-    gpxCoords.removeAt(selectedNode);
-    rawGpx.removeAt(selectedNode);
-    await mapController!.removeSymbol(mapSymbols[selectedNode]);
-    mapSymbols.removeAt(selectedNode);
-    updateTrackLine();
-    selectedNode = -1;
-    selectedSymbol = null;
-    setState(() {});
-  }
-
   void _onSymbolTapped(Symbol symbol) async {
     selectedNode = await searchSymbol(symbol.id);
+
     if (selectedNode == -1) return;
-    edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'delete'));
-    nodes.removeAt(selectedNode);
-    gpxCoords.removeAt(selectedNode);
-    rawGpx.removeAt(selectedNode);
+
+    edits.add(
+        (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
+
+    track!.removeNode(selectedNode);
+
     await mapController!.removeSymbol(mapSymbols[selectedNode]);
     mapSymbols.removeAt(selectedNode);
     updateTrackLine();
@@ -204,34 +181,29 @@ class _MyMaplibreState extends State<MyMapLibre> {
       case DragEventType.start:
         selectedNode = await searchSymbol(id);
         selectedSymbol = mapSymbols[selectedNode];
-        edits.add((selectedNode, cloneWpt(rawGpx[selectedNode]), 'moved'));
+        edits.add((
+          selectedNode,
+          cloneWpt(track!.trackSegment[selectedNode]),
+          'moved'
+        ));
         break;
       case DragEventType.drag:
         thr.throttle(() {
-          gpxCoords[selectedNode] = LatLng(current.latitude, current.longitude);
+          track!.changeNodeAt(
+              selectedNode, LatLng(current.latitude, current.longitude));
           updateTrackLine();
         });
         break;
       case DragEventType.end:
-        LatLng coord = LatLng(current.latitude, current.longitude);
-        gpxCoords[selectedNode] = coord;
-        nodes[selectedNode] = coord;
+        LatLng coordinate = LatLng(current.latitude, current.longitude);
+        track!.changeNodeAt(selectedNode, coordinate);
 
-        Wpt dragged = rawGpx[selectedNode];
-        dragged.lat = coord.latitude;
-        dragged.lon = coord.longitude;
-        rawGpx[selectedNode] = dragged;
+        Wpt dragged = track!.getWptAt(selectedNode);
+        dragged.lat = coordinate.latitude;
+        dragged.lon = coordinate.longitude;
+        track!.setWptAt(selectedNode, dragged);
 
         updateTrackLine();
-        String image = 'nodes-box';
-        if (mapTools['move']!) {
-          image = 'draggable-box';
-        }
-        // _updateSelectedSymbol(
-        //   selectedSymbol!,
-        //   SymbolOptions(
-        //       geometry: coord, draggable: mapTools['move']!, iconImage: image),
-        // );
         resetMapSymbols();
         setState(() {});
         break;
@@ -285,7 +257,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void updateTrackLine() async {
     await mapController!
-        .updateLine(trackLine!, LineOptions(geometry: gpxCoords));
+        .updateLine(trackLine!, LineOptions(geometry: track!.getCoordsList()));
     // setState(() {});
   }
 
@@ -296,10 +268,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return 'node-plain';
   }
 
-  List<SymbolOptions> makeSymbolOptions(nodes) {
+  List<SymbolOptions> makeSymbolOptions() {
     final symbolOptions = <SymbolOptions>[];
     String image = getNodesImage(mapTools);
     bool draggable = mapTools['move']! ? true : false;
+    List<LatLng> nodes = track!.getCoordsList();
+
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
       symbolOptions.add(SymbolOptions(
@@ -313,7 +287,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<List<Symbol>> addMapSymbols() async {
-    mapSymbols = await mapController!.addSymbols(makeSymbolOptions(nodes));
+    mapSymbols = await mapController!.addSymbols(makeSymbolOptions());
     return mapSymbols;
   }
 
@@ -324,7 +298,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void resetMapSymbols() async {
-    removeMapSymbols();
+    await removeMapSymbols();
     await addMapSymbols();
   }
 
@@ -341,46 +315,28 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<Line?> loadTrack(trackSegment) async {
-    LatLng cur;
+    track = Track(trackSegment);
 
-    Bounds bounds = Bounds(
-        LatLng(trackSegment.first.lat, trackSegment.first.lon),
-        LatLng(trackSegment.first.lat, trackSegment.first.lon));
-
-    for (var i = 0; i < trackSegment.length - 1; i++) {
-      cur = LatLng(trackSegment[i].lat, trackSegment[i].lon);
-      bounds.expand(cur);
-      gpxCoords.add(cur);
-      nodes.add(cur);
-      rawGpx.add(trackSegment[i]);
-    }
-
-    //Last point. No mid node required
-    int last = trackSegment.length - 1;
-    cur = LatLng(trackSegment[last].lat, trackSegment[last].lon);
-    bounds.expand(cur);
-    gpxCoords.add(cur);
-    rawGpx.add(trackSegment[last]);
-    nodes.add(cur);
-
-    trackLine = await mapController!.addLine(
-      LineOptions(
-        geometry: gpxCoords,
-        lineColor: trackColor.toHexStringRGB(),
-        lineWidth: trackWidth,
-        lineOpacity: 0.9,
-      ),
-    );
+    await track!.init();
 
     mapController!.moveCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
-          southwest: bounds.southEast,
-          northeast: bounds.northWest,
+          southwest: track!.getBounds().southEast,
+          northeast: track!.getBounds().northWest,
         ),
         left: 10,
         top: 5,
         bottom: 25,
+      ),
+    );
+
+    trackLine = await mapController!.addLine(
+      LineOptions(
+        geometry: track!.getCoordsList(),
+        lineColor: trackColor.toHexStringRGB(),
+        lineWidth: trackWidth,
+        lineOpacity: 0.9,
       ),
     );
 
@@ -396,10 +352,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
       }
     }
     editMode = false;
-    nodes = [];
+    track!.reset();
     mapSymbols = [];
-    gpxCoords = [];
-    rawGpx = [];
     edits = [];
   }
 
@@ -414,33 +368,22 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void undoDelete(idx, wpt) async {
-    rawGpx.insert(idx, wpt);
+    track!.addWpt(idx, wpt);
 
-    LatLng latlon = LatLng(wpt.lat, wpt.lon);
-    gpxCoords.insert(idx, latlon);
-    nodes.insert(idx, latlon);
     updateTrackLine();
     resetMapSymbols();
   }
 
   void undoAdd(idx, wpt) async {
-    rawGpx.removeAt(idx);
-    gpxCoords.removeAt(idx);
-    nodes.removeAt(idx);
+    track!.removeWpt(idx, wpt);
     updateTrackLine();
     resetMapSymbols();
   }
 
   void undoMove(idx, wpt) async {
-    rawGpx[idx] = wpt;
-    LatLng latlon = LatLng(wpt.lat, wpt.lon);
-    nodes[idx] = latlon;
-    gpxCoords[idx] = latlon;
+    track!.moveWpt(idx, wpt);
+
     updateTrackLine();
-    String image = 'node-box';
-    if (mapTools['move']!) {
-      image = 'draggable-box';
-    }
     resetMapSymbols();
   }
 
@@ -602,30 +545,5 @@ class _MyMaplibreState extends State<MyMapLibre> {
             : Container(),
       ],
     ]);
-  }
-}
-
-class Bounds {
-  LatLng southEast = const LatLng(90, 179.9);
-  LatLng northWest = const LatLng(-90, -180);
-  // Constructor
-  Bounds(LatLng southEast, LatLng northWest);
-
-  expand(LatLng coord) {
-    if (coord.latitude < southEast.latitude) {
-      southEast = LatLng(coord.latitude, southEast.longitude);
-    }
-
-    if (coord.longitude < southEast.longitude) {
-      southEast = LatLng(southEast.latitude, coord.longitude);
-    }
-
-    if (coord.latitude > northWest.latitude) {
-      northWest = LatLng(coord.latitude, northWest.longitude);
-    }
-
-    if (coord.longitude > northWest.longitude) {
-      northWest = LatLng(northWest.latitude, coord.longitude);
-    }
   }
 }

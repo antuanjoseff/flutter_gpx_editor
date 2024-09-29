@@ -129,25 +129,6 @@ double minDistance(LatLng A, LatLng B, LatLng P) {
   return reqAns;
 }
 
-int getClosestSegmentToLatLng(gpxCoords, point) {
-  if (gpxCoords.length <= 0) return -1;
-  int closestSegment = 0;
-  double distance = double.infinity;
-  double minD = double.infinity;
-
-  // return 0;
-  for (var i = 0; i < gpxCoords.length - 1; i++) {
-    distance = minDistance(gpxCoords[i], gpxCoords[i + 1], point);
-
-    if (distance < minD) {
-      minD = distance;
-      closestSegment = i;
-    }
-  }
-
-  return closestSegment;
-}
-
 LatLng projectionPoint(LatLng X, LatLng Y, LatLng P) {
   double slope = (Y.latitude - X.latitude) / (Y.longitude - X.longitude);
   double perpendicular = -1 / slope;
