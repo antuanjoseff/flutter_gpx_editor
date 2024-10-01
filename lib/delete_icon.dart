@@ -11,27 +11,20 @@ class DeleteIcon extends StatefulWidget {
     required this.color2,
   }) : super(key: key);
 
-
-
   @override
   State<DeleteIcon> createState() => _DeleteIconState();
 }
 
 class _DeleteIconState extends State<DeleteIcon> {
-
   @override
   Widget build(BuildContext context) {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        const Positioned(
-          top: 4,
-          right: 4,
-          child: Icon(
-            Icons.square_rounded, 
-            color: Colors.grey, 
-            size: 20)
-        ),
+        Positioned(
+            top: 4,
+            right: 4,
+            child: Icon(Icons.square_rounded, color: widget.color2, size: 20)),
         Positioned(
           bottom: 4,
           left: 4,
@@ -40,7 +33,7 @@ class _DeleteIconState extends State<DeleteIcon> {
             size: 25,
             color: widget.color1,
           ),
-        ),        
+        ),
       ],
     );
   }

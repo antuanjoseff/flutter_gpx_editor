@@ -464,9 +464,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         backgroundColor:
                             mapTools['move']! ? backgroundActive : Colors.white,
                         child: MoveIcon(
-                            color1:
-                                mapTools['move']! ? Colors.white : Colors.grey,
-                            color2: Colors.white),
+                          color1:
+                              mapTools['move']! ? Colors.white : Colors.grey,
+                          color2: mapTools['move']!
+                              ? Colors.white
+                              : const Color(0xffc5dd16),
+                        ),
                       ),
                     ),
                     const Padding(
@@ -492,8 +495,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         backgroundColor:
                             mapTools['add']! ? backgroundActive : Colors.white,
                         child: AddIcon(
-                            color1:
-                                mapTools['add']! ? Colors.white : Colors.grey,
+                            color1: mapTools['add']!
+                                ? Colors.white
+                                : const Color(0xffc5dd16),
                             color2: colorIcon2!),
                       ),
                     ),
@@ -519,7 +523,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         child: DeleteIcon(
                             color1: mapTools['delete']!
                                 ? Colors.white
-                                : Colors.grey,
+                                : const Color(0xffc5dd16),
                             color2: colorIcon2!),
                       ),
                     ),
