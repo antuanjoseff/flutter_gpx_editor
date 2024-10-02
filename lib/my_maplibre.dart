@@ -83,6 +83,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.showEditIcons = showEditIcons;
     controller.hideEditIcons = hideEditIcons;
     controller.updateTrack = updateTrack;
+    controller.getEditMode = getEditMode;
     controller.getGpx = () {
       return track!.getTrack();
     };
@@ -118,6 +119,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
         mapTools[ktool] = false;
       }
     }
+  }
+
+  bool getEditMode() {
+    return editMode;
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -315,6 +320,16 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<Line?> loadTrack(trackSegment) async {
+    deactivateTools();
+    showTools = false;
+    if (trackLine != null) {
+      removeTrackLine();
+      removeMapSymbols();
+      mapSymbols = [];
+      edits = [];
+      track!.reset();
+      setState(() {});
+    }
     track = Track(trackSegment);
 
     await track!.init();
@@ -343,16 +358,18 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return trackLine;
   }
 
-  void removeTrackLine() {
+  Future<void> removeTrackLine() async {
+    print('*' * 60);
     if (trackLine != null) {
+      print('remove TRACKLINE');
       mapController!.removeLine(trackLine!);
       if (editMode) {
         editMode = false;
-        removeMapSymbols();
       }
     }
+    removeMapSymbols();
     editMode = false;
-    track!.reset();
+
     mapSymbols = [];
     edits = [];
   }
@@ -443,9 +460,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
                   children: [
                     GestureDetector(
                       onTap: () async {
-                        print('------------------------${mapTools['move']}');
                         toggleTool('move');
-                        print('------------------------${mapTools['move']}');
+
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
 
@@ -461,14 +477,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         setState(() {});
                       },
                       child: CircleAvatar(
+                        radius: 20,
                         backgroundColor:
                             mapTools['move']! ? backgroundActive : Colors.white,
                         child: MoveIcon(
                           color1:
                               mapTools['move']! ? Colors.white : Colors.grey,
-                          color2: mapTools['move']!
-                              ? Colors.white
-                              : const Color(0xffc5dd16),
+                          color2: const Color(0xffc5dd16),
                         ),
                       ),
                     ),
@@ -495,10 +510,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         backgroundColor:
                             mapTools['add']! ? backgroundActive : Colors.white,
                         child: AddIcon(
-                            color1: mapTools['add']!
-                                ? Colors.white
-                                : const Color(0xffc5dd16),
-                            color2: colorIcon2!),
+                          color1: mapTools['add']! ? Colors.white : Colors.grey,
+                          color2: const Color(0xffc5dd16),
+                        ),
                       ),
                     ),
                     const Padding(
@@ -521,10 +535,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
                             ? backgroundActive
                             : Colors.white,
                         child: DeleteIcon(
-                            color1: mapTools['delete']!
-                                ? Colors.white
-                                : const Color(0xffc5dd16),
-                            color2: colorIcon2!),
+                          color1:
+                              mapTools['delete']! ? Colors.white : Colors.grey,
+                          color2: const Color(0xffc5dd16),
+                        ),
                       ),
                     ),
                     const Padding(

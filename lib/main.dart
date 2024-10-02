@@ -100,6 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
+    editMode = _controller.getEditMode!();
     super.initState();
   }
 
@@ -185,7 +186,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         );
                       }
                       lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-                      await _controller.removeTrackLine!;
+
+                      // await _controller.removeTrackLine!;
                       await _controller.loadTrack!(lineSegment);
                       await _controller.addMapSymbols!;
 
@@ -211,7 +213,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ...[
             trackLoaded
                 ? CircleAvatar(
-                    backgroundColor: editMode
+                    backgroundColor: _controller.getEditMode!()
                         ? Theme.of(context).secondaryHeaderColor
                         : Colors.transparent,
                     child: IconButton(
