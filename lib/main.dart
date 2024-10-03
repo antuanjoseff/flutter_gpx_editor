@@ -100,7 +100,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    editMode = _controller.getEditMode!();
     super.initState();
   }
 
@@ -118,8 +117,8 @@ class _MyHomePageState extends State<MyHomePage> {
               fit: BoxFit.scaleDown,
               child: Row(
                 children: [
-                  Icon(Icons.warning, color: Colors.red),
-                  SizedBox(
+                  const Icon(Icons.warning, color: Colors.red),
+                  const SizedBox(
                     width: 10,
                   ),
                   Text(AppLocalizations.of(context)!.errorOpeningFile),
@@ -213,7 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ...[
             trackLoaded
                 ? CircleAvatar(
-                    backgroundColor: _controller.getEditMode!()
+                    backgroundColor: editMode
                         ? Theme.of(context).secondaryHeaderColor
                         : Colors.transparent,
                     child: IconButton(
@@ -222,12 +221,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       tooltip: 'Show Snackbar',
                       onPressed: () async {
                         editMode = !editMode;
+                        _controller.setEditMode!(editMode);
                         if (editMode) {
                           _controller.addMapSymbols!();
-                          _controller.showEditIcons!();
                         } else {
                           _controller.removeMapSymbols!();
-                          _controller.hideEditIcons!();
                         }
                         setState(() {});
                       },
@@ -285,7 +283,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: () async {
                         editMode = false;
                         _controller.removeMapSymbols!();
-                        _controller.hideEditIcons!();
+                        _controller.setEditMode!(editMode);
 
                         var result = await Navigator.push(
                             context,

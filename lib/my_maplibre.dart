@@ -80,10 +80,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.removeTrackLine = removeTrackLine;
     controller.addMapSymbols = addMapSymbols;
     controller.removeMapSymbols = removeMapSymbols;
-    controller.showEditIcons = showEditIcons;
-    controller.hideEditIcons = hideEditIcons;
     controller.updateTrack = updateTrack;
-    controller.getEditMode = getEditMode;
+    controller.setEditMode = setEditMode;
     controller.getGpx = () {
       return track!.getTrack();
     };
@@ -121,8 +119,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
-  bool getEditMode() {
-    return editMode;
+  void setEditMode(bool value) {
+    showTools = value;
+    setState(() {});
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -372,16 +371,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
     mapSymbols = [];
     edits = [];
-  }
-
-  void showEditIcons() {
-    showTools = true;
-    setState(() {});
-  }
-
-  void hideEditIcons() {
-    showTools = false;
-    setState(() {});
   }
 
   void undoDelete(idx, wpt) async {
