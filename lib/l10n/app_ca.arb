@@ -8,5 +8,6 @@
     "trackColor": "Color:",
     "trackWidth": "Amplada:",
     "apply": "Aplicar",
-    "nodeToAddIsToFar": "El punt seleccionat està massa lluny del track. Fes zoom i torna-ho a provar"
+    "nodeToAddIsToFar": "El punt seleccionat està massa lluny del track. Fes zoom i torna-ho a provar",
+    "tapAgainToExit": "Toca enrera de nou per sortir"
 }

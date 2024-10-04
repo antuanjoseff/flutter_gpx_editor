@@ -11,5 +11,6 @@
   "trackColor": "Track:",
   "trackWidth": "Width:",
   "apply": "Apply",
-  "nodeToAddIsToFar": "Selected point is too far from track. Zoom in and try again"
+  "nodeToAddIsToFar": "Selected point is too far from track. Zoom in and try again",
+  "tapAgainToExit": "Tap again to exit"
 }

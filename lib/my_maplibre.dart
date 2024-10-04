@@ -119,8 +119,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
-  void setEditMode(bool value) {
-    showTools = value;
+  void setEditMode(bool editmode) async {
+    showTools = editmode;
+    if (editmode) {
+      mapSymbols = await addMapSymbols();
+    } else {
+      print('remove map symbols');
+      mapSymbols = await removeMapSymbols();
+    }
     setState(() {});
   }
 
@@ -133,8 +139,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void addNode(point, clickedPoint) async {
     if (track!.getCoordsList().isEmpty || !mapTools['add']!) return;
     var (dist, position, P) = track!.getCandidateNode(clickedPoint);
+    print(
+        '############################################################3adding node ????');
 
-    if (dist < 20) {
+    if (dist < 50) {
       Symbol added = await mapController!.addSymbol(SymbolOptions(
           draggable: false, iconImage: 'node-plain', geometry: P));
 
@@ -149,7 +157,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       track!.addNode(position, newWpt);
 
       updateTrackLine();
-      resetMapSymbols();
+      await resetMapSymbols();
       setState(() {});
     } else {
       // Show snalbar message
@@ -208,7 +216,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
         track!.setWptAt(selectedNode, dragged);
 
         updateTrackLine();
-        resetMapSymbols();
+        await resetMapSymbols();
         setState(() {});
         break;
     }
@@ -291,19 +299,21 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<List<Symbol>> addMapSymbols() async {
+    print('................ADD MAP SYMBOLS');
     mapSymbols = await mapController!.addSymbols(makeSymbolOptions());
     return mapSymbols;
   }
 
-  Future<List> removeMapSymbols() async {
+  Future<List<Symbol>> removeMapSymbols() async {
+    print('---------------REMOVE MAP SYMBOLS');
     await mapController!.removeSymbols(mapSymbols);
     mapSymbols = [];
     return mapSymbols;
   }
 
-  void resetMapSymbols() async {
-    await removeMapSymbols();
-    await addMapSymbols();
+  Future<void> resetMapSymbols() async {
+    mapSymbols = await removeMapSymbols();
+    mapSymbols = await addMapSymbols();
   }
 
   @override
@@ -323,8 +333,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     showTools = false;
     if (trackLine != null) {
       removeTrackLine();
-      removeMapSymbols();
-      mapSymbols = [];
+      mapSymbols = await removeMapSymbols();
       edits = [];
       track!.reset();
       setState(() {});
@@ -491,8 +500,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                           colorIcon2 = activeColor2;
                         }
 
-                        removeMapSymbols();
-                        await addMapSymbols();
+                        resetMapSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
@@ -508,15 +516,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
                       padding: EdgeInsets.all(2.0),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        removeMapSymbols();
+                      onTap: () async {
                         toggleTool('delete');
                         if (mapTools['delete']!) {
                           mapController!.onSymbolTapped.add(_onSymbolTapped);
                         } else {
                           mapController?.onSymbolTapped.remove(_onSymbolTapped);
                         }
-                        addMapSymbols();
+                        await resetMapSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
