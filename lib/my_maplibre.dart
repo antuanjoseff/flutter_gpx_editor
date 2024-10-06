@@ -10,6 +10,7 @@ import 'package:throttling/throttling.dart';
 import 'util.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'classes/track.dart';
+import 'utils/user_simple_preferences.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -93,6 +94,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     colorIcon2 = defaultColorIcon2;
     backgroundColor = backgroundInactive;
     super.initState();
+    trackWidth = UserSimplePreferences.getTrackWidth() ?? trackWidth;
+    trackColor = UserSimplePreferences.getTrackColor() ?? trackColor;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       backgroundActive = Theme.of(context).canvasColor;
     });
@@ -328,7 +331,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     await mapController!.updateLine(trackLine!, changes);
   }
 
-  Future<Line?> loadTrack(trackSegment) async {
+  Future<Line?> loadTrack(List<Wpt> trackSegment) async {
     deactivateTools();
     showTools = false;
     if (trackLine != null) {
@@ -338,8 +341,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
       track!.reset();
       setState(() {});
     }
-    track = Track(trackSegment);
 
+    track = Track(trackSegment);
     await track!.init();
 
     mapController!.moveCamera(
@@ -430,25 +433,24 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Widget build(BuildContext context) {
     return Stack(children: [
       MapLibreMap(
-        compassEnabled: false,
-        trackCameraPosition: true,
-        onMapCreated: _onMapCreated,
-        onMapClick: addNode,
-        onStyleLoadedCallback: () {
-          addImageFromAsset(
-              mapController!, "node-plain", "assets/symbols/node-plain.png");
-          addImageFromAsset(
-              mapController!, "node-drag", "assets/symbols/node-drag.png");
-          addImageFromAsset(
-              mapController!, "node-delete", "assets/symbols/node-delete.png");
-        },
-        initialCameraPosition: const CameraPosition(
-          target: LatLng(42.0, 3.0),
-          zoom: 0,
-        ),
-        styleString:
-            'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json',
-      ),
+          compassEnabled: false,
+          trackCameraPosition: true,
+          onMapCreated: _onMapCreated,
+          onMapClick: addNode,
+          onStyleLoadedCallback: () {
+            addImageFromAsset(
+                mapController!, "node-plain", "assets/symbols/node-plain.png");
+            addImageFromAsset(
+                mapController!, "node-drag", "assets/symbols/node-drag.png");
+            addImageFromAsset(mapController!, "node-delete",
+                "assets/symbols/node-delete.png");
+          },
+          initialCameraPosition: const CameraPosition(
+            target: LatLng(42.0, 3.0),
+            zoom: 0,
+          ),
+          styleString:
+              'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json'),
       ...[
         showTools
             ? Positioned(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:convert';
 import 'package:gpx_editor/my_maplibre.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +13,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:double_tap_to_exit/double_tap_to_exit.dart';
 import 'util.dart';
+import 'utils/user_simple_preferences.dart';
 
-void main() {
+Future main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await UserSimplePreferences.init();
   runApp(MyApp());
 }
 
@@ -72,11 +76,12 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Wpt> theGpx = [];
 
   Color? trackColor;
-  double? trackWidth;
+  double trackWidth = 3;
 
   @override
   void initState() {
     super.initState();
+    trackWidth = UserSimplePreferences.getTrackWidth() ?? 3;
   }
 
   @override
@@ -283,6 +288,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             var (Color? trColor, double? trWidth) = result;
                             trackColor = trColor!;
                             trackWidth = trWidth!;
+
+                            await UserSimplePreferences.setTrackWidth(trWidth);
+                            await UserSimplePreferences.setTrackColor(
+                                trackColor!);
+
                             LineOptions changes = LineOptions(
                                 lineColor: trackColor!.toHexStringRGB(),
                                 lineWidth: trackWidth);
