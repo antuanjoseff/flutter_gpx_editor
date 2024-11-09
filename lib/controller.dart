@@ -7,6 +7,7 @@ class Controller {
   Future<List<Symbol>> Function()? addMapSymbols;
   void Function()? removeMapSymbols;
   List<Wpt> Function()? getGpx;
+  List<Wpt> Function()? getWpts;
   Future<void> Function(LineOptions changes)? updateTrack;
   void Function(bool value)? setEditMode;
 }

@@ -241,6 +241,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         gpx.metadata = gpxOriginal!.metadata;
                         List<Wpt> newGpx = [];
                         theGpx = _controller.getGpx!();
+                        List<Wpt> wpts = _controller.getWpts!();
+
                         for (var idx = 0; idx < theGpx.length; idx++) {
                           Wpt wpt = theGpx[idx];
                           newGpx.add(wpt);
@@ -250,6 +252,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         gpx.trks = [
                           Trk(trksegs: [trkseg])
                         ];
+                        gpx.wpts = wpts;
 
                         // generate xml string
                         var gpxString = gpx.toGpxString(pretty: true);

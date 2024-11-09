@@ -4,10 +4,12 @@
     "fileFormatNotSupported": "Formato de archivo no soportado",
     "onEditFirstTrackSegment": "Sólo se muestra el primer segmento del track",
     "accept": "Acceptar",
+    "cancel": "Cancelar",
     "trackSettings": "Configuración",
     "trackColor": "Color:",
     "trackWidth": "Grosor:",
     "apply": "Aplicar",
     "nodeToAddIsToFar": "El punto seleccionado está demasiado alejado del track. Haz zoom y inténtalo de nuevo",
-    "tapAgainToExit": "Toca atrás de nuevo para salir"
+    "tapAgainToExit": "Toca atrás de nuevo para salir",
+    "wptName": "Nombre del wapoint"
 }

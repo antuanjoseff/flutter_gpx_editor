@@ -7,6 +7,7 @@ import '../util.dart';
 class Track {
   // Original track
   List<Wpt> trackSegment = [];
+  List<Wpt> wpts = [];
 
   // Array of coordinates to draw a linestring on map
   List<LatLng> gpxCoords = [];
@@ -40,6 +41,10 @@ class Track {
     return trackSegment;
   }
 
+  List<Wpt> getWpts() {
+    return wpts;
+  }
+
   my.Bounds getBounds() {
     return bounds!;
   }
@@ -55,18 +60,26 @@ class Track {
     trackSegment.insert(position + 1, wpt);
   }
 
+  void addWpt(Wpt wpt) {
+    wpts.add(wpt);
+  }
+
+  void removeWpt(int idx, Wpt wpt) {
+    wpts.removeAt(idx);
+  }
+
   void removeNode(int index) {
     trackSegment.removeAt(index);
     gpxCoords.removeAt(index);
   }
 
-  void addWpt(int idx, Wpt wpt) {
+  void addTrkpt(int idx, Wpt wpt) {
     trackSegment.insert(idx, wpt);
     LatLng latlon = LatLng(wpt.lat!, wpt.lon!);
     gpxCoords.insert(idx, latlon);
   }
 
-  void removeWpt(int idx, Wpt wpt) {
+  void removeTrkpt(int idx, Wpt wpt) {
     trackSegment.removeAt(idx);
     gpxCoords.removeAt(idx);
   }

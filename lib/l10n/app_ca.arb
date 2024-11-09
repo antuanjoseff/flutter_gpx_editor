@@ -4,10 +4,12 @@
     "fileFormatNotSupported": "Format d'arxiu no suportat",
     "onEditFirstTrackSegment": "Només es mostra el primer segment del track",
     "accept": "Acceptar",
+    "cancel": "Cancel·lar",
     "trackSettings": "Configuració",
     "trackColor": "Color:",
     "trackWidth": "Amplada:",
     "apply": "Aplicar",
     "nodeToAddIsToFar": "El punt seleccionat està massa lluny del track. Fes zoom i torna-ho a provar",
-    "tapAgainToExit": "Toca enrera de nou per sortir"
+    "tapAgainToExit": "Toca enrera de nou per sortir",
+    "wptName": "Nom del wapoint"
 }

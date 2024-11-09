@@ -7,10 +7,12 @@
   "fileFormatNotSupported": "File format not supported",
   "onEditFirstTrackSegment": "Only first track segment is shown",
   "accept": "Accept",
+  "cancel": "Cancel",
   "trackSettings": "Track settings",
   "trackColor": "Track:",
   "trackWidth": "Width:",
   "apply": "Apply",
   "nodeToAddIsToFar": "Selected point is too far from track. Zoom in and try again",
-  "tapAgainToExit": "Tap again to exit"
+  "tapAgainToExit": "Tap again to exit",
+  "wptName": "Waypoint name"
 }

@@ -24,13 +24,13 @@ class _AddIconState extends State<AddIcon> {
         Positioned(
             top: 4,
             right: 4,
-            child: Icon(Icons.square_rounded, color: widget.color2, size: 20)),
+            child: Icon(Icons.square_rounded, color: widget.color2, size: 25)),
         Positioned(
           bottom: 4,
           left: 4,
           child: Icon(
             Icons.add_box,
-            size: 25,
+            size: 35,
             color: widget.color1,
           ),
         ),

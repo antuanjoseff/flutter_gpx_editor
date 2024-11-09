@@ -32,7 +32,18 @@ class _MyMaplibreState extends State<MyMapLibre> {
     'move': false,
     'add': false,
     'delete': false,
+    'addWayPoint': false
   };
+
+  late TextEditingController controller;
+
+  ButtonStyle styleElevatedButtons = ElevatedButton.styleFrom(
+    minimumSize: Size.zero, // Set this
+    padding:
+        EdgeInsets.only(left: 20, right: 20, top: 5, bottom: 5), // and this
+    backgroundColor: Colors.pink,
+    foregroundColor: Colors.white,
+  );
 
   double trackWidth = 3;
   Color trackColor = Colors.pink; // Selects a mid-range green.
@@ -54,6 +65,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Line? trackLine;
   List<Symbol> mapSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
+  List<Wpt> mapWayPoints = []; //Symbols to show track Way Points
 
   bool editMode = true;
 
@@ -83,6 +95,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.removeMapSymbols = removeMapSymbols;
     controller.updateTrack = updateTrack;
     controller.setEditMode = setEditMode;
+    controller.getWpts = () {
+      return track!.getWpts();
+    };
     controller.getGpx = () {
       return track!.getTrack();
     };
@@ -99,6 +114,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       backgroundActive = Theme.of(context).canvasColor;
     });
+    controller = TextEditingController();
   }
 
   void deactivateTools() {
@@ -139,8 +155,82 @@ class _MyMaplibreState extends State<MyMapLibre> {
     // mapController!.onFeatureDrag.add(_onNodeDrag);
   }
 
+  void handleClick(point, clickedPoint) {
+    if (mapTools['add']! && track!.getCoordsList().isNotEmpty) {
+      addNode(point, clickedPoint);
+      return;
+    }
+
+    if (mapTools['addWayPoint']! && track!.getCoordsList().isNotEmpty) {
+      addWayPoint(point, clickedPoint);
+      return;
+    }
+  }
+
+  Future<String?> opentDialog() async {
+    controller.text = "Waypoint ${mapWayPoints.length}";
+
+    return await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(AppLocalizations.of(context)!.wptName),
+                content: TextField(
+                  onTap: () => controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: controller.value.text.length),
+                  autofocus: true,
+                  // decoration: InputDecoration(hintText: 'Nom del track'),
+                  controller: controller,
+                  onSubmitted: (_) => submit(),
+                ),
+                actions: [
+                  ElevatedButton(
+                      style: styleElevatedButtons,
+                      onPressed: submit,
+                      child: Text(AppLocalizations.of(context)!.accept)),
+                  ElevatedButton(
+                      style: styleElevatedButtons,
+                      onPressed: cancel,
+                      child: Text(AppLocalizations.of(context)!.cancel)),
+                ]));
+  }
+
+  void submit() {
+    Navigator.of(context).pop(controller.text);
+    controller.clear();
+  }
+
+  void cancel() {
+    Navigator.of(context).pop();
+  }
+
+  void addWayPoint(point, clickedPoint) async {
+    Symbol waypoint = await mapController!.addSymbol(SymbolOptions(
+        draggable: false, iconImage: 'waypoint', geometry: clickedPoint));
+
+    String? wptName = await opentDialog();
+
+    if (wptName != null) {
+      Wpt wpt = Wpt(
+          lat: clickedPoint.latitude,
+          lon: clickedPoint.longitude,
+          name: wptName);
+      mapWayPoints.add(wpt);
+      track!.addWpt(wpt);
+
+      edits.add((mapWayPoints.length - 1, wpt, 'addWaypoint'));
+
+      // await resetMapWayPoints();
+      setState(() {});
+    } else {
+      mapController!.removeSymbol(waypoint);
+    }
+
+    // // Show snalbar message
+    // showSnackBar(context, AppLocalizations.of(context)!.nodeToAddIsToFar);
+  }
+
   void addNode(point, clickedPoint) async {
-    if (track!.getCoordsList().isEmpty || !mapTools['add']!) return;
     var (dist, position, P) = track!.getCandidateNode(clickedPoint);
     print(
         '############################################################3adding node ????');
@@ -321,6 +411,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   @override
   void dispose() {
+    controller.dispose();
     if (mapController!.onFeatureDrag.isNotEmpty) {
       mapController!.onFeatureDrag.remove(_onNodeDrag);
     }
@@ -386,14 +477,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void undoDelete(idx, wpt) async {
-    track!.addWpt(idx, wpt);
+    track!.addTrkpt(idx, wpt);
 
     updateTrackLine();
     resetMapSymbols();
   }
 
   void undoAdd(idx, wpt) async {
-    track!.removeWpt(idx, wpt);
+    track!.removeTrkpt(idx, wpt);
     updateTrackLine();
     resetMapSymbols();
   }
@@ -436,7 +527,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
           compassEnabled: false,
           trackCameraPosition: true,
           onMapCreated: _onMapCreated,
-          onMapClick: addNode,
+          onMapClick: handleClick,
           onStyleLoadedCallback: () {
             addImageFromAsset(
                 mapController!, "node-plain", "assets/symbols/node-plain.png");
@@ -444,6 +535,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
                 mapController!, "node-drag", "assets/symbols/node-drag.png");
             addImageFromAsset(mapController!, "node-delete",
                 "assets/symbols/node-delete.png");
+            addImageFromAsset(
+                mapController!, "waypoint", "assets/symbols/waypoint.png");
           },
           initialCameraPosition: const CameraPosition(
             target: LatLng(42.0, 3.0),
@@ -477,7 +570,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         setState(() {});
                       },
                       child: CircleAvatar(
-                        radius: 20,
+                        radius: 25,
                         backgroundColor:
                             mapTools['move']! ? backgroundActive : Colors.white,
                         child: MoveIcon(
@@ -487,8 +580,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.all(2.0),
+                    const SizedBox(
+                      height: 4,
                     ),
                     GestureDetector(
                       onTap: () async {
@@ -506,6 +599,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         setState(() {});
                       },
                       child: CircleAvatar(
+                        radius: 25,
                         backgroundColor:
                             mapTools['add']! ? backgroundActive : Colors.white,
                         child: AddIcon(
@@ -514,8 +608,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.all(2.0),
+                    const SizedBox(
+                      height: 4,
                     ),
                     GestureDetector(
                       onTap: () async {
@@ -529,6 +623,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         setState(() {});
                       },
                       child: CircleAvatar(
+                        radius: 25,
                         backgroundColor: mapTools['delete']!
                             ? backgroundActive
                             : Colors.white,
@@ -539,8 +634,28 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.all(4.0),
+                    const SizedBox(
+                      height: 4,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        toggleTool('addWayPoint');
+                        setState(() {});
+                      },
+                      child: CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          Icons.flag,
+                          color: mapTools['addWayPoint']!
+                              ? Theme.of(context).canvasColor
+                              : Colors.grey,
+                          size: 35,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 4,
                     ),
                     ...[
                       edits.isNotEmpty
@@ -549,6 +664,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                                 undo();
                               },
                               child: const CircleAvatar(
+                                radius: 25,
                                 backgroundColor: Colors.white,
                                 child: UndoIcon(),
                               ),
