@@ -28,7 +28,7 @@ class MyMapLibre extends StatefulWidget {
 
 class _MyMaplibreState extends State<MyMapLibre> {
   Track? track;
-  Map<String, bool> mapTools = {
+  Map<String, bool> editTools = {
     'move': false,
     'add': false,
     'delete': false,
@@ -41,6 +41,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
     minimumSize: Size.zero, // Set this
     padding:
         EdgeInsets.only(left: 20, right: 20, top: 5, bottom: 5), // and this
+    backgroundColor: Colors.pink,
+    foregroundColor: Colors.white,
+  );
+
+  ButtonStyle buttonNoPadding = ElevatedButton.styleFrom(
+    minimumSize: Size.zero, // Set this
+    padding: EdgeInsets.only(left: 2, right: 2, top: 2, bottom: 2), // and this
     backgroundColor: Colors.pink,
     foregroundColor: Colors.white,
   );
@@ -63,9 +70,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
   MapLibreMapController? mapController;
 
   Line? trackLine;
-  List<Symbol> mapSymbols =
+  List<Symbol> nodeSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
-  List<Wpt> mapWayPoints = []; //Symbols to show track Way Points
+
+  List<Symbol> wptSymbols = [];
+  List<Wpt> mapWayPoints = []; //Gpx WPTS
 
   bool editMode = true;
 
@@ -91,8 +100,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
     controller.removeTrackLine = removeTrackLine;
-    controller.addMapSymbols = addMapSymbols;
-    controller.removeMapSymbols = removeMapSymbols;
+    controller.addNodeSymbols = addNodeSymbols;
+    controller.removeNodeSymbols = removeNodeSymbols;
     controller.updateTrack = updateTrack;
     controller.setEditMode = setEditMode;
     controller.getWpts = () {
@@ -118,22 +127,22 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void deactivateTools() {
-    for (String tool in mapTools.keys) {
-      mapTools[tool] = false;
+    for (String tool in editTools.keys) {
+      editTools[tool] = false;
     }
   }
 
   void activateTool(tool) {
     deactivateTools();
-    mapTools[tool] = true;
+    editTools[tool] = true;
   }
 
-  void toggleTool(tool) {
-    for (String ktool in mapTools.keys) {
+  void setEditTool(tool) {
+    for (String ktool in editTools.keys) {
       if (ktool == tool) {
-        mapTools[tool] = !mapTools[tool]!;
+        editTools[tool] = !editTools[tool]!;
       } else {
-        mapTools[ktool] = false;
+        editTools[ktool] = false;
       }
     }
   }
@@ -141,33 +150,89 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void setEditMode(bool editmode) async {
     showTools = editmode;
     if (editmode) {
-      mapSymbols = await addMapSymbols();
+      nodeSymbols = await addNodeSymbols();
     } else {
       print('remove map symbols');
-      mapSymbols = await removeMapSymbols();
+      nodeSymbols = await removeNodeSymbols();
     }
     setState(() {});
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    // mapController!.onSymbolTapped.add(_onSymbolTapped);
+    mapController!.onSymbolTapped.add(_onSymbolTapped);
     // mapController!.onFeatureDrag.add(_onNodeDrag);
   }
 
+  void _onSymbolTapped(Symbol symbol) async {
+    selectedNode = await searchSymbol(symbol.id);
+    if (selectedNode == -1) {
+      // then user tapped on a wpt
+      _tappedOnWpt(symbol);
+      return;
+    }
+
+    edits.add(
+        (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
+
+    track!.removeNode(selectedNode);
+
+    await mapController!.removeSymbol(nodeSymbols[selectedNode]);
+    nodeSymbols.removeAt(selectedNode);
+    updateTrackLine();
+    setState(() {});
+  }
+
+  void _tappedOnWpt(Symbol search) async {
+    debugPrint('SEARCH SYMBOL ID: ${search.id}');
+    int idx = -1;
+    for (var i = 0; idx == -1 && i < mapWayPoints.length; i++) {
+      debugPrint('ITERATE SYMBOL ID: ${mapWayPoints[i].extensions['id']}');
+      if (search.id == mapWayPoints[i].extensions['id']) {
+        idx = i;
+      }
+    }
+    debugPrint('TPPPPPPP     $idx');
+    if (idx != -1) {
+      var (action, wptName) = await openDialogEditWpt(mapWayPoints[idx]);
+      if (action == 'edit' && wptName != mapWayPoints[idx].name) {
+        edits.add((idx, cloneWpt(mapWayPoints[idx]), 'editWaypoint'));
+        mapWayPoints[idx].name = wptName;
+      } else {
+        if (action == 'delete') {
+          edits.add((idx, cloneWpt(mapWayPoints[idx]), 'deleteWaypoint'));
+          mapWayPoints.removeAt(idx);
+          mapController!.removeSymbol(wptSymbols[idx]);
+          wptSymbols.removeAt(idx);
+          track!.removeWpt(idx);
+        }
+      }
+    }
+
+    // edits.add(
+    //     (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
+
+    // track!.removeNode(selectedNode);
+
+    // await mapController!.removeSymbol(nodeSymbols[selectedNode]);
+    // nodeSymbols.removeAt(selectedNode);
+
+    setState(() {});
+  }
+
   void handleClick(point, clickedPoint) {
-    if (mapTools['add']! && track!.getCoordsList().isNotEmpty) {
+    if (editTools['add']! && track!.getCoordsList().isNotEmpty) {
       addNode(point, clickedPoint);
       return;
     }
 
-    if (mapTools['addWayPoint']! && track!.getCoordsList().isNotEmpty) {
+    if (editTools['addWayPoint']! && track!.getCoordsList().isNotEmpty) {
       addWayPoint(point, clickedPoint);
       return;
     }
   }
 
-  Future<String?> opentDialog() async {
+  Future<(String?, String?)> openDialogNewWpt() async {
     controller.text = "Waypoint ${mapWayPoints.length}";
 
     return await showDialog(
@@ -181,12 +246,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
                   autofocus: true,
                   // decoration: InputDecoration(hintText: 'Nom del track'),
                   controller: controller,
-                  onSubmitted: (_) => submit(),
+                  onSubmitted: (_) => submit('add'),
                 ),
                 actions: [
                   ElevatedButton(
                       style: styleElevatedButtons,
-                      onPressed: submit,
+                      onPressed: () {
+                        submit('add');
+                      },
                       child: Text(AppLocalizations.of(context)!.accept)),
                   ElevatedButton(
                       style: styleElevatedButtons,
@@ -195,35 +262,133 @@ class _MyMaplibreState extends State<MyMapLibre> {
                 ]));
   }
 
-  void submit() {
-    Navigator.of(context).pop(controller.text);
+  Future<(String?, String?)> openDialogEditWpt(Wpt wpt) async {
+    controller.text = "${wpt.name}";
+
+    return await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(AppLocalizations.of(context)!.editWpt),
+                    GestureDetector(
+                      onTap: () async {
+                        bool confirm = await openDialogConfirmWpt();
+                        if (confirm) {
+                          deleteWpt(wpt);
+                        }
+                      },
+                      child: Icon(Icons.delete,
+                          size: 35, color: Theme.of(context).canvasColor),
+                    ),
+                  ],
+                ),
+                content: TextField(
+                  onTap: () => controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: controller.value.text.length),
+                  autofocus: true,
+                  // decoration: InputDecoration(hintText: 'Nom del track'),
+                  controller: controller,
+                  onSubmitted: (_) => submit('edit'),
+                ),
+                actions: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                          style: styleElevatedButtons,
+                          onPressed: () {
+                            submit('edit');
+                          },
+                          child: Icon(Icons.check)),
+                      // child: Text(AppLocalizations.of(context)!.accept)),
+                      SizedBox(width: 20),
+                      ElevatedButton(
+                          style: styleElevatedButtons,
+                          onPressed: cancel,
+                          child: Icon(Icons.cancel)
+                          // child: Text(AppLocalizations.of(context)!.cancel)
+                          ),
+                    ],
+                  )
+                ]));
+  }
+
+  Future<bool> openDialogConfirmWpt() async {
+    return await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(AppLocalizations.of(context)!.confirmDeleteWpt),
+                actions: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                          style: styleElevatedButtons,
+                          onPressed: () {
+                            Navigator.of(context).pop(true);
+                          },
+                          child: Text(AppLocalizations.of(context)!.yes)),
+                      SizedBox(width: 20),
+                      ElevatedButton(
+                          style: styleElevatedButtons,
+                          onPressed: () {
+                            Navigator.of(context).pop(false);
+                          },
+                          child: Text(AppLocalizations.of(context)!.no)),
+                    ],
+                  )
+                ]));
+  }
+
+  void deleteWpt(Wpt wpt) {
+    Navigator.of(context).pop((
+      'delete',
+      wpt.extensions['id'],
+    ));
+    controller.clear();
+  }
+
+  void submit(String action) {
+    Navigator.of(context).pop((
+      action,
+      controller.text,
+    ));
     controller.clear();
   }
 
   void cancel() {
-    Navigator.of(context).pop();
+    Navigator.of(context).pop((
+      'cancel',
+      null,
+    ));
   }
 
   void addWayPoint(point, clickedPoint) async {
-    Symbol waypoint = await mapController!.addSymbol(SymbolOptions(
+    Symbol wptSymbol = await mapController!.addSymbol(SymbolOptions(
         draggable: false, iconImage: 'waypoint', geometry: clickedPoint));
 
-    String? wptName = await opentDialog();
+    var (action, wptName) = await openDialogNewWpt();
 
     if (wptName != null) {
       Wpt wpt = Wpt(
           lat: clickedPoint.latitude,
           lon: clickedPoint.longitude,
-          name: wptName);
+          name: wptName,
+          extensions: {"id": wptSymbol.id});
+
       mapWayPoints.add(wpt);
       track!.addWpt(wpt);
 
+      wptSymbols.add(wptSymbol);
       edits.add((mapWayPoints.length - 1, wpt, 'addWaypoint'));
 
       // await resetMapWayPoints();
       setState(() {});
     } else {
-      mapController!.removeSymbol(waypoint);
+      mapController!.removeSymbol(wptSymbol);
     }
 
     // // Show snalbar message
@@ -239,7 +404,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       Symbol added = await mapController!.addSymbol(SymbolOptions(
           draggable: false, iconImage: 'node-plain', geometry: P));
 
-      mapSymbols.insert(position + 1, added);
+      nodeSymbols.insert(position + 1, added);
 
       Wpt newWpt = cloneWpt(halfSegmentWpt(
           track!.trackSegment[position], track!.trackSegment[position + 1]));
@@ -250,28 +415,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
       track!.addNode(position, newWpt);
 
       updateTrackLine();
-      await resetMapSymbols();
+      await resetNodeSymbols();
       setState(() {});
     } else {
       // Show snalbar message
       showSnackBar(context, AppLocalizations.of(context)!.nodeToAddIsToFar);
     }
-  }
-
-  void _onSymbolTapped(Symbol symbol) async {
-    selectedNode = await searchSymbol(symbol.id);
-
-    if (selectedNode == -1) return;
-
-    edits.add(
-        (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
-
-    track!.removeNode(selectedNode);
-
-    await mapController!.removeSymbol(mapSymbols[selectedNode]);
-    mapSymbols.removeAt(selectedNode);
-    updateTrackLine();
-    setState(() {});
   }
 
   void _onNodeDrag(id,
@@ -285,7 +434,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     switch (eventType) {
       case DragEventType.start:
         selectedNode = await searchSymbol(id);
-        selectedSymbol = mapSymbols[selectedNode];
+        selectedSymbol = nodeSymbols[selectedNode];
         edits.add((
           selectedNode,
           cloneWpt(track!.trackSegment[selectedNode]),
@@ -309,7 +458,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
         track!.setWptAt(selectedNode, dragged);
 
         updateTrackLine();
-        await resetMapSymbols();
+        await resetNodeSymbols();
         setState(() {});
         break;
     }
@@ -347,8 +496,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<int> searchSymbol(String search) async {
-    for (var i = 0; i < mapSymbols.length; i++) {
-      if (mapSymbols[i].id == search) {
+    for (var i = 0; i < nodeSymbols.length; i++) {
+      if (nodeSymbols[i].id == search) {
         return i;
       }
     }
@@ -375,8 +524,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   List<SymbolOptions> makeSymbolOptions() {
     final symbolOptions = <SymbolOptions>[];
-    String image = getNodesImage(mapTools);
-    bool draggable = mapTools['move']! ? true : false;
+    String image = getNodesImage(editTools);
+    bool draggable = editTools['move']! ? true : false;
     List<LatLng> nodes = track!.getCoordsList();
 
     for (var idx = 0; idx < nodes.length; idx++) {
@@ -391,22 +540,22 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return symbolOptions;
   }
 
-  Future<List<Symbol>> addMapSymbols() async {
+  Future<List<Symbol>> addNodeSymbols() async {
     print('................ADD MAP SYMBOLS');
-    mapSymbols = await mapController!.addSymbols(makeSymbolOptions());
-    return mapSymbols;
+    nodeSymbols = await mapController!.addSymbols(makeSymbolOptions());
+    return nodeSymbols;
   }
 
-  Future<List<Symbol>> removeMapSymbols() async {
+  Future<List<Symbol>> removeNodeSymbols() async {
     print('---------------REMOVE MAP SYMBOLS');
-    await mapController!.removeSymbols(mapSymbols);
-    mapSymbols = [];
-    return mapSymbols;
+    await mapController!.removeSymbols(nodeSymbols);
+    nodeSymbols = [];
+    return nodeSymbols;
   }
 
-  Future<void> resetMapSymbols() async {
-    mapSymbols = await removeMapSymbols();
-    mapSymbols = await addMapSymbols();
+  Future<void> resetNodeSymbols() async {
+    nodeSymbols = await removeNodeSymbols();
+    nodeSymbols = await addNodeSymbols();
   }
 
   @override
@@ -427,7 +576,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     showTools = false;
     if (trackLine != null) {
       removeTrackLine();
-      mapSymbols = await removeMapSymbols();
+      nodeSymbols = await removeNodeSymbols();
       edits = [];
       track!.reset();
       setState(() {});
@@ -469,10 +618,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
         editMode = false;
       }
     }
-    removeMapSymbols();
+    removeNodeSymbols();
     editMode = false;
 
-    mapSymbols = [];
+    nodeSymbols = [];
     edits = [];
   }
 
@@ -480,20 +629,49 @@ class _MyMaplibreState extends State<MyMapLibre> {
     track!.addTrkpt(idx, wpt);
 
     updateTrackLine();
-    resetMapSymbols();
+    resetNodeSymbols();
   }
 
   void undoAdd(idx, wpt) async {
     track!.removeTrkpt(idx, wpt);
     updateTrackLine();
-    resetMapSymbols();
+    resetNodeSymbols();
   }
 
   void undoMove(idx, wpt) async {
     track!.moveWpt(idx, wpt);
 
     updateTrackLine();
-    resetMapSymbols();
+    resetNodeSymbols();
+  }
+
+  void undoAddWaypoint(idx, wpt) async {
+    track!.removeWpt(idx);
+    mapController!.removeSymbol(wptSymbols[idx]);
+    wptSymbols.removeAt(idx);
+  }
+
+  void undoEditWaypoint(idx, wpt) async {
+    debugPrint('UNDO EDIT WAYPOINT    $idx');
+    mapWayPoints[idx].name = wpt.name;
+    track!.updateWpt(idx, wpt);
+  }
+
+  void undoDeleteWaypoint(idx, wpt) async {
+    Symbol wptSymbol = await mapController!.addSymbol(SymbolOptions(
+        draggable: false,
+        iconImage: 'waypoint',
+        geometry: LatLng(wpt.lat, wpt.lon)));
+
+    debugPrint('id of new symbol ${wptSymbol.id}');
+    wpt.extensions['id'] = wptSymbol.id;
+    mapWayPoints.insert(idx, cloneWpt(wpt));
+    debugPrint('id of recovered wpt ${wpt.extensions['id']}');
+
+    wptSymbols.insert(idx, wptSymbol);
+
+    track!.insertWpt(idx, wpt);
+    setState(() {});
   }
 
   void undo() async {
@@ -512,6 +690,15 @@ class _MyMaplibreState extends State<MyMapLibre> {
         break;
       case 'add':
         undoAdd(idx, wpt);
+        break;
+      case 'addWaypoint':
+        undoAddWaypoint(idx, wpt);
+        break;
+      case 'editWaypoint':
+        undoEditWaypoint(idx, wpt);
+        break;
+      case 'deleteWaypoint':
+        undoDeleteWaypoint(idx, wpt);
         break;
     }
 
@@ -553,29 +740,30 @@ class _MyMaplibreState extends State<MyMapLibre> {
                   children: [
                     GestureDetector(
                       onTap: () async {
-                        toggleTool('move');
+                        setEditTool('move');
 
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
 
-                        if (mapTools['move']!) {
+                        if (editTools['move']!) {
                           colorIcon1 = activeColor1;
                           colorIcon2 = activeColor2;
                           mapController!.onFeatureDrag.add(_onNodeDrag);
                         } else {
                           mapController!.onFeatureDrag.remove(_onNodeDrag);
                         }
-                        resetMapSymbols();
+                        resetNodeSymbols();
 
                         setState(() {});
                       },
                       child: CircleAvatar(
                         radius: 25,
-                        backgroundColor:
-                            mapTools['move']! ? backgroundActive : Colors.white,
+                        backgroundColor: editTools['move']!
+                            ? backgroundActive
+                            : Colors.white,
                         child: MoveIcon(
                           color1:
-                              mapTools['move']! ? Colors.white : Colors.grey,
+                              editTools['move']! ? Colors.white : Colors.grey,
                           color2: const Color(0xffc5dd16),
                         ),
                       ),
@@ -585,25 +773,26 @@ class _MyMaplibreState extends State<MyMapLibre> {
                     ),
                     GestureDetector(
                       onTap: () async {
-                        toggleTool('add');
+                        setEditTool('add');
 
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
 
-                        if (mapTools['add']!) {
+                        if (editTools['add']!) {
                           colorIcon1 = activeColor1;
                           colorIcon2 = activeColor2;
                         }
 
-                        resetMapSymbols();
+                        resetNodeSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
                         radius: 25,
                         backgroundColor:
-                            mapTools['add']! ? backgroundActive : Colors.white,
+                            editTools['add']! ? backgroundActive : Colors.white,
                         child: AddIcon(
-                          color1: mapTools['add']! ? Colors.white : Colors.grey,
+                          color1:
+                              editTools['add']! ? Colors.white : Colors.grey,
                           color2: const Color(0xffc5dd16),
                         ),
                       ),
@@ -613,23 +802,23 @@ class _MyMaplibreState extends State<MyMapLibre> {
                     ),
                     GestureDetector(
                       onTap: () async {
-                        toggleTool('delete');
-                        if (mapTools['delete']!) {
+                        setEditTool('delete');
+                        if (editTools['delete']!) {
                           mapController!.onSymbolTapped.add(_onSymbolTapped);
                         } else {
                           mapController?.onSymbolTapped.remove(_onSymbolTapped);
                         }
-                        await resetMapSymbols();
+                        await resetNodeSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
                         radius: 25,
-                        backgroundColor: mapTools['delete']!
+                        backgroundColor: editTools['delete']!
                             ? backgroundActive
                             : Colors.white,
                         child: DeleteIcon(
                           color1:
-                              mapTools['delete']! ? Colors.white : Colors.grey,
+                              editTools['delete']! ? Colors.white : Colors.grey,
                           color2: const Color(0xffc5dd16),
                         ),
                       ),
@@ -638,8 +827,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
                       height: 4,
                     ),
                     GestureDetector(
-                      onTap: () {
-                        toggleTool('addWayPoint');
+                      onTap: () async {
+                        setEditTool('addWayPoint');
+                        await removeNodeSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
@@ -647,7 +837,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         backgroundColor: Colors.white,
                         child: Icon(
                           Icons.flag,
-                          color: mapTools['addWayPoint']!
+                          color: editTools['addWayPoint']!
                               ? Theme.of(context).canvasColor
                               : Colors.grey,
                           size: 35,

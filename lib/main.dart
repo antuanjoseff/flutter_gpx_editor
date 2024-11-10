@@ -234,7 +234,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       tooltip: 'Show Snackbar',
                       onPressed: () async {
-                        _controller.removeMapSymbols!();
+                        _controller.removeNodeSymbols!();
                         var gpx = GeoXml();
                         gpx.creator = "dart-gpx library";
 
@@ -277,7 +277,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         tooltip: 'Show Snackbar',
                         onPressed: () async {
                           editMode = false;
-                          _controller.removeMapSymbols!();
+                          _controller.removeNodeSymbols!();
                           _controller.setEditMode!(editMode);
 
                           var result = await Navigator.push(

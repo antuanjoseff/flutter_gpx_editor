@@ -5,11 +5,16 @@
     "onEditFirstTrackSegment": "Sólo se muestra el primer segmento del track",
     "accept": "Acceptar",
     "cancel": "Cancelar",
+    "delete": "Eliminar",
     "trackSettings": "Configuración",
     "trackColor": "Color:",
     "trackWidth": "Grosor:",
     "apply": "Aplicar",
     "nodeToAddIsToFar": "El punto seleccionado está demasiado alejado del track. Haz zoom y inténtalo de nuevo",
     "tapAgainToExit": "Toca atrás de nuevo para salir",
-    "wptName": "Nombre del wapoint"
+    "wptName": "Nombre del waypoint",
+    "editWpt": "Nombre",
+    "confirmDeleteWpt": "Eliminar waypoint?",
+    "yes": "YES",
+    "no": "NO"
 }

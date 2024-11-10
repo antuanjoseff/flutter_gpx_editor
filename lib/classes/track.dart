@@ -64,7 +64,17 @@ class Track {
     wpts.add(wpt);
   }
 
-  void removeWpt(int idx, Wpt wpt) {
+  void insertWpt(int idx, Wpt wpt) {
+    wpts.insert(idx, wpt);
+  }
+
+  void updateWpt(int idx, Wpt wpt) {
+    debugPrint('            $idx        ${wpt.name}');
+    wpts.removeAt(idx);
+    wpts.insert(idx, wpt);
+  }
+
+  void removeWpt(int idx) {
     wpts.removeAt(idx);
   }
 
