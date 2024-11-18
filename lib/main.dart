@@ -1,4 +1,4 @@
-import 'dart:convert';
+import './vars/vars.dart';
 import 'dart:convert';
 import 'package:gpx_editor/my_maplibre.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -36,8 +36,8 @@ class _MyAppState extends State<MyApp> {
         debugShowCheckedModeBanner: false,
         title: 'Flutter Demo',
         theme: ThemeData(
-          canvasColor: Colors.pink,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.pink),
+          canvasColor: primaryColor,
+          colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
           useMaterial3: true,
         ),
         localizationsDelegates: const [
@@ -134,7 +134,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return DoubleTapToExit(
       snackBar: SnackBar(
         duration: const Duration(seconds: 2),
-        backgroundColor: Colors.red,
+        backgroundColor: primaryColor,
         margin: const EdgeInsets.only(left: 50, right: 50, bottom: 30),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(50),
@@ -214,7 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           : Colors.transparent,
                       child: IconButton(
                         icon: Icon(Icons.edit,
-                            color: editMode ? Colors.pink : Colors.white),
+                            color: editMode ? primaryColor : white),
                         tooltip: 'Show Snackbar',
                         onPressed: () async {
                           editMode = !editMode;

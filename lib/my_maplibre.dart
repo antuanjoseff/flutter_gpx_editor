@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gpx_editor/vars/vars.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
 import 'controller.dart';
@@ -41,27 +42,27 @@ class _MyMaplibreState extends State<MyMapLibre> {
     minimumSize: Size.zero, // Set this
     padding:
         EdgeInsets.only(left: 20, right: 20, top: 5, bottom: 5), // and this
-    backgroundColor: Colors.pink,
-    foregroundColor: Colors.white,
+    backgroundColor: primaryColor,
+    foregroundColor: white,
   );
 
   ButtonStyle buttonNoPadding = ElevatedButton.styleFrom(
     minimumSize: Size.zero, // Set this
     padding: EdgeInsets.only(left: 2, right: 2, top: 2, bottom: 2), // and this
-    backgroundColor: Colors.pink,
-    foregroundColor: Colors.white,
+    backgroundColor: primaryColor,
+    foregroundColor: white,
   );
 
   double trackWidth = 3;
-  Color trackColor = Colors.pink; // Selects a mid-range green.
-  Color defaultColorIcon1 = Colors.grey; // Selects a mid-range green.
-  Color defaultColorIcon2 = Colors.grey; // Selects a mid-range green.
+  Color trackColor = primaryColor; // Selects a mid-range green.
+  Color defaultColorIcon1 = inactiveColor; // Selects a mid-range green.
+  Color defaultColorIcon2 = inactiveColor; // Selects a mid-range green.
 
-  Color activeColor1 = Colors.grey; // Selects a mid-range green.
-  Color activeColor2 = Colors.white; // Selects a mid-range green.
+  Color activeColor1 = inactiveColor; // Selects a mid-range green.
+  Color activeColor2 = white; // Selects a mid-range green.
 
   Color? backgroundActive;
-  Color backgroundInactive = Colors.white;
+  Color backgroundInactive = white;
 
   Color? colorIcon1;
   Color? colorIcon2;
@@ -137,7 +138,16 @@ class _MyMaplibreState extends State<MyMapLibre> {
     editTools[tool] = true;
   }
 
-  void setEditTool(tool) {
+  bool isAnyToolActive() {
+    for (String kTool in editTools.keys) {
+      if (editTools[kTool] == true) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void toggleTool(tool) {
     for (String ktool in editTools.keys) {
       if (ktool == tool) {
         editTools[tool] = !editTools[tool]!;
@@ -150,7 +160,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void setEditMode(bool editmode) async {
     showTools = editmode;
     if (editmode) {
-      nodeSymbols = await addNodeSymbols();
+      // nodeSymbols = await addNodeSymbols();
     } else {
       print('remove map symbols');
       nodeSymbols = await removeNodeSymbols();
@@ -160,14 +170,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    mapController!.onSymbolTapped.add(_onSymbolTapped);
     // mapController!.onFeatureDrag.add(_onNodeDrag);
   }
 
-  void _onSymbolTapped(Symbol symbol) async {
+  void _onFeatureTapped(Symbol symbol) async {
     selectedNode = await searchSymbol(symbol.id);
     if (selectedNode == -1) {
       // then user tapped on a wpt
+      debugPrint('TAPPED ON WPT');
       _tappedOnWpt(symbol);
       return;
     }
@@ -179,6 +189,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
     await mapController!.removeSymbol(nodeSymbols[selectedNode]);
     nodeSymbols.removeAt(selectedNode);
+    redrawNodeSymbols();
     updateTrackLine();
     setState(() {});
   }
@@ -187,12 +198,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
     debugPrint('SEARCH SYMBOL ID: ${search.id}');
     int idx = -1;
     for (var i = 0; idx == -1 && i < mapWayPoints.length; i++) {
-      debugPrint('ITERATE SYMBOL ID: ${mapWayPoints[i].extensions['id']}');
       if (search.id == mapWayPoints[i].extensions['id']) {
         idx = i;
       }
     }
-    debugPrint('TPPPPPPP     $idx');
     if (idx != -1) {
       var (action, wptName) = await openDialogEditWpt(mapWayPoints[idx]);
       if (action == 'edit' && wptName != mapWayPoints[idx].name) {
@@ -392,13 +401,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
 
     // // Show snalbar message
-    // showSnackBar(context, AppLocalizations.of(context)!.nodeToAddIsToFar);
+    // showSnackBar(context, AppLocalizations.of(context)!.nodeToAddIsTooFar);
   }
 
   void addNode(point, clickedPoint) async {
     var (dist, position, P) = track!.getCandidateNode(clickedPoint);
-    print(
-        '############################################################3adding node ????');
 
     if (dist < 50) {
       Symbol added = await mapController!.addSymbol(SymbolOptions(
@@ -415,12 +422,41 @@ class _MyMaplibreState extends State<MyMapLibre> {
       track!.addNode(position, newWpt);
 
       updateTrackLine();
-      await resetNodeSymbols();
+      await redrawNodeSymbols();
       setState(() {});
     } else {
-      // Show snalbar message
-      showSnackBar(context, AppLocalizations.of(context)!.nodeToAddIsToFar);
+      // Show snackbar message
+      snackbar(
+        context,
+        Icon(Icons.warning),
+        secondColor,
+        Text(
+          AppLocalizations.of(context)!.nodeToAddIsTooFar,
+          style: TextStyle(color: white),
+        ),
+      );
     }
+  }
+
+  void snackbar(context, Icon icon, Color color, Text myText) {
+    // Close previous snackbar
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          children: [
+            Row(
+              children: [const SizedBox(width: 10), myText],
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+          ],
+        ),
+        backgroundColor: color,
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   void _onNodeDrag(id,
@@ -458,7 +494,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
         track!.setWptAt(selectedNode, dragged);
 
         updateTrackLine();
-        await resetNodeSymbols();
+        await redrawNodeSymbols();
         setState(() {});
         break;
     }
@@ -541,7 +577,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<List<Symbol>> addNodeSymbols() async {
-    print('................ADD MAP SYMBOLS');
     nodeSymbols = await mapController!.addSymbols(makeSymbolOptions());
     return nodeSymbols;
   }
@@ -553,9 +588,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return nodeSymbols;
   }
 
-  Future<void> resetNodeSymbols() async {
+  Future<void> redrawNodeSymbols() async {
     nodeSymbols = await removeNodeSymbols();
-    nodeSymbols = await addNodeSymbols();
+    // Only draw nodes if some key is activated
+    if (isAnyToolActive()) {
+      nodeSymbols = await addNodeSymbols();
+    }
   }
 
   @override
@@ -564,6 +602,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     if (mapController!.onFeatureDrag.isNotEmpty) {
       mapController!.onFeatureDrag.remove(_onNodeDrag);
     }
+    mapController?.onSymbolTapped.remove(_onFeatureTapped);
     super.dispose();
   }
 
@@ -625,39 +664,39 @@ class _MyMaplibreState extends State<MyMapLibre> {
     edits = [];
   }
 
-  void undoDelete(idx, wpt) async {
+  Future<void> undoDelete(idx, wpt) async {
     track!.addTrkpt(idx, wpt);
 
     updateTrackLine();
-    resetNodeSymbols();
+    redrawNodeSymbols();
   }
 
-  void undoAdd(idx, wpt) async {
+  Future<void> undoAdd(idx, wpt) async {
     track!.removeTrkpt(idx, wpt);
     updateTrackLine();
-    resetNodeSymbols();
+    redrawNodeSymbols();
   }
 
-  void undoMove(idx, wpt) async {
+  Future<void> undoMove(idx, wpt) async {
     track!.moveWpt(idx, wpt);
 
     updateTrackLine();
-    resetNodeSymbols();
+    redrawNodeSymbols();
   }
 
-  void undoAddWaypoint(idx, wpt) async {
+  Future<void> undoAddWaypoint(idx, wpt) async {
     track!.removeWpt(idx);
     mapController!.removeSymbol(wptSymbols[idx]);
     wptSymbols.removeAt(idx);
   }
 
-  void undoEditWaypoint(idx, wpt) async {
+  Future<void> undoEditWaypoint(idx, wpt) async {
     debugPrint('UNDO EDIT WAYPOINT    $idx');
     mapWayPoints[idx].name = wpt.name;
     track!.updateWpt(idx, wpt);
   }
 
-  void undoDeleteWaypoint(idx, wpt) async {
+  Future<void> undoDeleteWaypoint(idx, wpt) async {
     Symbol wptSymbol = await mapController!.addSymbol(SymbolOptions(
         draggable: false,
         iconImage: 'waypoint',
@@ -683,22 +722,34 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
     switch (type) {
       case 'moved':
-        undoMove(idx, wpt);
+        await undoMove(idx, wpt);
+        snackbar(context, Icon(Icons.drag_handle), secondColor,
+            Text('Node moved back', style: textPrimary));
         break;
       case 'delete':
-        undoDelete(idx, wpt);
+        await undoDelete(idx, wpt);
+        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
+            secondColor, Text('Node recovered', style: textPrimary));
         break;
       case 'add':
-        undoAdd(idx, wpt);
+        await undoAdd(idx, wpt);
+        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
+            secondColor, Text('Node recovered', style: textPrimary));
         break;
       case 'addWaypoint':
-        undoAddWaypoint(idx, wpt);
+        await undoAddWaypoint(idx, wpt);
+        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
+            secondColor, Text('Undo waypoint', style: textPrimary));
         break;
       case 'editWaypoint':
-        undoEditWaypoint(idx, wpt);
+        await undoEditWaypoint(idx, wpt);
+        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
+            secondColor, Text('Waypoint edited back', style: textPrimary));
         break;
       case 'deleteWaypoint':
-        undoDeleteWaypoint(idx, wpt);
+        await undoDeleteWaypoint(idx, wpt);
+        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
+            secondColor, Text('Waypoint recovered', style: textPrimary));
         break;
     }
 
@@ -711,6 +762,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Widget build(BuildContext context) {
     return Stack(children: [
       MapLibreMap(
+          minMaxZoomPreference: MinMaxZoomPreference(0, 19),
           compassEnabled: false,
           trackCameraPosition: true,
           onMapCreated: _onMapCreated,
@@ -734,13 +786,35 @@ class _MyMaplibreState extends State<MyMapLibre> {
       ...[
         showTools
             ? Positioned(
+                left: 10,
+                top: 10,
+                child: GestureDetector(
+                  onTap: () {
+                    if (edits.isNotEmpty) {
+                      undo();
+                    } else {}
+                  },
+                  child: CircleAvatar(
+                    radius: 25,
+                    backgroundColor: edits.isNotEmpty ? primaryColor : white,
+                    child:
+                        UndoIcon(color: edits.isEmpty ? inactiveColor : white),
+                  ),
+                ),
+              )
+            : Container()
+      ],
+      ...[
+        showTools
+            ? Positioned(
                 right: 10,
                 top: 10,
-                child: Column(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     GestureDetector(
                       onTap: () async {
-                        setEditTool('move');
+                        toggleTool('move');
 
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
@@ -752,28 +826,26 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         } else {
                           mapController!.onFeatureDrag.remove(_onNodeDrag);
                         }
-                        resetNodeSymbols();
+                        redrawNodeSymbols();
 
                         setState(() {});
                       },
                       child: CircleAvatar(
                         radius: 25,
-                        backgroundColor: editTools['move']!
-                            ? backgroundActive
-                            : Colors.white,
+                        backgroundColor:
+                            editTools['move']! ? backgroundActive : white,
                         child: MoveIcon(
-                          color1:
-                              editTools['move']! ? Colors.white : Colors.grey,
+                          color1: editTools['move']! ? white : inactiveColor,
                           color2: const Color(0xffc5dd16),
                         ),
                       ),
                     ),
                     const SizedBox(
-                      height: 4,
+                      width: 4,
                     ),
                     GestureDetector(
                       onTap: () async {
-                        setEditTool('add');
+                        toggleTool('add');
 
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
@@ -783,32 +855,32 @@ class _MyMaplibreState extends State<MyMapLibre> {
                           colorIcon2 = activeColor2;
                         }
 
-                        resetNodeSymbols();
+                        redrawNodeSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
                         radius: 25,
                         backgroundColor:
-                            editTools['add']! ? backgroundActive : Colors.white,
+                            editTools['add']! ? backgroundActive : white,
                         child: AddIcon(
-                          color1:
-                              editTools['add']! ? Colors.white : Colors.grey,
+                          color1: editTools['add']! ? white : inactiveColor,
                           color2: const Color(0xffc5dd16),
                         ),
                       ),
                     ),
                     const SizedBox(
-                      height: 4,
+                      width: 4,
                     ),
                     GestureDetector(
                       onTap: () async {
-                        setEditTool('delete');
+                        toggleTool('delete');
                         if (editTools['delete']!) {
-                          mapController!.onSymbolTapped.add(_onSymbolTapped);
+                          mapController!.onSymbolTapped.add(_onFeatureTapped);
                         } else {
-                          mapController?.onSymbolTapped.remove(_onSymbolTapped);
+                          mapController?.onSymbolTapped
+                              .remove(_onFeatureTapped);
                         }
-                        await resetNodeSymbols();
+                        await redrawNodeSymbols();
                         setState(() {});
                       },
                       child: CircleAvatar(
@@ -817,18 +889,25 @@ class _MyMaplibreState extends State<MyMapLibre> {
                             ? backgroundActive
                             : Colors.white,
                         child: DeleteIcon(
-                          color1:
-                              editTools['delete']! ? Colors.white : Colors.grey,
+                          color1: editTools['delete']! ? white : inactiveColor,
                           color2: const Color(0xffc5dd16),
                         ),
                       ),
                     ),
                     const SizedBox(
-                      height: 4,
+                      width: 4,
                     ),
                     GestureDetector(
                       onTap: () async {
-                        setEditTool('addWayPoint');
+                        toggleTool('addWayPoint');
+
+                        if (editTools['addWayPoint']!) {
+                          mapController!.onSymbolTapped.add(_onFeatureTapped);
+                        } else {
+                          mapController?.onSymbolTapped
+                              .remove(_onFeatureTapped);
+                        }
+
                         await removeNodeSymbols();
                         setState(() {});
                       },
@@ -839,28 +918,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
                           Icons.flag,
                           color: editTools['addWayPoint']!
                               ? Theme.of(context).canvasColor
-                              : Colors.grey,
+                              : inactiveColor,
                           size: 35,
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 4,
-                    ),
-                    ...[
-                      edits.isNotEmpty
-                          ? GestureDetector(
-                              onTap: () {
-                                undo();
-                              },
-                              child: const CircleAvatar(
-                                radius: 25,
-                                backgroundColor: Colors.white,
-                                child: UndoIcon(),
-                              ),
-                            )
-                          : Container()
-                    ],
                   ],
                 ),
               )

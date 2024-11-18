@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import './vars/vars.dart';
 
 class UndoIcon extends StatelessWidget {
-  const UndoIcon({super.key});
+  final Color color;
+  const UndoIcon({
+    super.key,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Icon(
+    return Icon(
       Icons.undo,
       size: 35,
-      color: Colors.black,
+      color: color,
     );
   }
 }

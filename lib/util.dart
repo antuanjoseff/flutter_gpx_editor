@@ -1,10 +1,12 @@
 import 'package:flutter/services.dart';
+import 'package:gpx_editor/vars/vars.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
 import 'dart:math';
 import 'dart:core';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import './vars/vars.dart';
 
 /// Adds an asset image to the currently displayed style
 Future<void> addImageFromAsset(
@@ -41,9 +43,6 @@ Wpt halfSegmentWpt(Wpt first, Wpt last) {
   half.lat = (first.lat! + last.lat!) / 2;
   half.lon = (first.lon! + last.lon!) / 2;
   half.time = avgTime(first.time, last.time);
-  print('FIRST TIME ................ ${first.time}');
-  print('LAST TIME ................ ${last.time}');
-  print('AVG TIME ................ ${half.time}');
 
   return half;
 }
@@ -174,17 +173,17 @@ void showSnackBar(context, String txt) {
         children: [
           Icon(
             Icons.warning_rounded,
-            color: Theme.of(context).primaryColor,
+            color: primaryColor,
           ),
           const SizedBox(width: 20),
           Expanded(
               child: Text(
             txt,
-            style: TextStyle(color: Theme.of(context).primaryColor),
+            style: TextStyle(color: primaryColor),
           )),
         ],
       ),
-      backgroundColor: Theme.of(context).secondaryHeaderColor,
+      backgroundColor: secondColor,
       duration: const Duration(milliseconds: 3000),
     ),
   );

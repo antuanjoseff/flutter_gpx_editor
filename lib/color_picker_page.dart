@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import './vars/vars.dart';
 
 class ColorPickerPage extends StatefulWidget {
   final Color? trackColor;
@@ -23,7 +24,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
   @override
   void initState() {
     trackWidth = widget.trackWidth ?? 3;
-    trackColor = widget.trackColor ?? Colors.pink;
+    trackColor = widget.trackColor ?? primaryColor;
     super.initState();
   }
 
