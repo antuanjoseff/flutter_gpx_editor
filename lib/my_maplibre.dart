@@ -170,10 +170,27 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    // mapController!.onFeatureDrag.add(_onNodeDrag);
+    mapController!.onSymbolTapped.add(_onFeatureTapped);
+    mapController!.onFeatureDrag.add(_onNodeDrag);
+  }
+
+  bool isMoveNodeActive() {
+    return editTools['move']!;
+  }
+
+  bool isDeleteActive() {
+    return editTools['delete']!;
+  }
+
+  bool isAddWayPointActive() {
+    return editTools['addWayPoint']!;
   }
 
   void _onFeatureTapped(Symbol symbol) async {
+    // Only when these tools are activated
+    if (!isDeleteActive() && !isAddWayPointActive()) {
+      return;
+    }
     selectedNode = await searchSymbol(symbol.id);
     if (selectedNode == -1) {
       // then user tapped on a wpt
@@ -427,18 +444,19 @@ class _MyMaplibreState extends State<MyMapLibre> {
     } else {
       // Show snackbar message
       snackbar(
-        context,
-        Icon(Icons.warning),
-        secondColor,
-        Text(
-          AppLocalizations.of(context)!.nodeToAddIsTooFar,
-          style: TextStyle(color: white),
-        ),
-      );
+          context,
+          Icon(Icons.warning),
+          secondColor,
+          Text(
+            AppLocalizations.of(context)!.nodeToAddIsTooFar,
+            style: TextStyle(color: white),
+          ),
+          Duration(seconds: 2));
     }
   }
 
-  void snackbar(context, Icon icon, Color color, Text myText) {
+  void snackbar(
+      context, Icon icon, Color color, Text myText, Duration duration) {
     // Close previous snackbar
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -446,7 +464,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
         content: Column(
           children: [
             Row(
-              children: [const SizedBox(width: 10), myText],
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [Flexible(child: myText)],
             ),
             const SizedBox(
               height: 10,
@@ -454,7 +473,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
           ],
         ),
         backgroundColor: color,
-        duration: Duration(seconds: 1),
+        duration: duration,
       ),
     );
   }
@@ -465,7 +484,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       required origin,
       required point,
       required eventType}) async {
-    // if (selectedNode == -1) return;
+    if (!isMoveNodeActive()) return;
 
     switch (eventType) {
       case DragEventType.start:
@@ -603,6 +622,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
       mapController!.onFeatureDrag.remove(_onNodeDrag);
     }
     mapController?.onSymbolTapped.remove(_onFeatureTapped);
+    mapController!.onFeatureDrag.remove(_onNodeDrag);
     super.dispose();
   }
 
@@ -723,33 +743,62 @@ class _MyMaplibreState extends State<MyMapLibre> {
     switch (type) {
       case 'moved':
         await undoMove(idx, wpt);
-        snackbar(context, Icon(Icons.drag_handle), secondColor,
-            Text('Node moved back', style: textPrimary));
+        snackbar(
+            context,
+            Icon(Icons.drag_handle),
+            secondColor,
+            Text(AppLocalizations.of(context)!.moveNodeUndone,
+                style: textWhite),
+            Duration(seconds: 1));
         break;
       case 'delete':
         await undoDelete(idx, wpt);
-        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
-            secondColor, Text('Node recovered', style: textPrimary));
+        snackbar(
+            context,
+            Icon(Icons.drag_handle, color: white),
+            secondColor,
+            Text(AppLocalizations.of(context)!.deleteNodeUndone,
+                style: textWhite),
+            Duration(seconds: 1));
         break;
       case 'add':
         await undoAdd(idx, wpt);
-        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
-            secondColor, Text('Node recovered', style: textPrimary));
+        snackbar(
+            context,
+            Icon(Icons.drag_handle, color: white),
+            secondColor,
+            Text(AppLocalizations.of(context)!.addNodeUndone, style: textWhite),
+            Duration(seconds: 1));
         break;
       case 'addWaypoint':
         await undoAddWaypoint(idx, wpt);
-        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
-            secondColor, Text('Undo waypoint', style: textPrimary));
+        snackbar(
+            context,
+            Icon(Icons.drag_handle, color: white),
+            secondColor,
+            Text(AppLocalizations.of(context)!.addWaypointUndone,
+                style: textWhite),
+            Duration(seconds: 1));
         break;
       case 'editWaypoint':
         await undoEditWaypoint(idx, wpt);
-        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
-            secondColor, Text('Waypoint edited back', style: textPrimary));
+        snackbar(
+            context,
+            Icon(Icons.drag_handle, color: white),
+            secondColor,
+            Text(AppLocalizations.of(context)!.editWaypointUndone,
+                style: textWhite),
+            Duration(seconds: 1));
         break;
       case 'deleteWaypoint':
         await undoDeleteWaypoint(idx, wpt);
-        snackbar(context, Icon(Icons.drag_handle, color: primaryColor),
-            secondColor, Text('Waypoint recovered', style: textPrimary));
+        snackbar(
+            context,
+            Icon(Icons.drag_handle, color: white),
+            secondColor,
+            Text(AppLocalizations.of(context)!.deleteWaypointUndone,
+                style: textWhite),
+            Duration(seconds: 1));
         break;
     }
 
@@ -767,14 +816,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
           trackCameraPosition: true,
           onMapCreated: _onMapCreated,
           onMapClick: handleClick,
-          onMapLongClick: (point, coordinates) {
-            debugPrint('${point}    ${coordinates}   ${initialLocation}');
-
-            mapController!.animateCamera(
-              CameraUpdate.newLatLngZoom(coordinates, 18),
-              duration: const Duration(milliseconds: 200),
-            );
-          },
           onStyleLoadedCallback: () {
             addImageFromAsset(
                 mapController!, "node-plain", "assets/symbols/node-plain.png");
@@ -830,9 +871,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         if (editTools['move']!) {
                           colorIcon1 = activeColor1;
                           colorIcon2 = activeColor2;
-                          mapController!.onFeatureDrag.add(_onNodeDrag);
-                        } else {
-                          mapController!.onFeatureDrag.remove(_onNodeDrag);
                         }
                         redrawNodeSymbols();
 
@@ -882,12 +920,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
                     GestureDetector(
                       onTap: () async {
                         toggleTool('delete');
-                        if (editTools['delete']!) {
-                          mapController!.onSymbolTapped.add(_onFeatureTapped);
-                        } else {
-                          mapController?.onSymbolTapped
-                              .remove(_onFeatureTapped);
-                        }
                         await redrawNodeSymbols();
                         setState(() {});
                       },
@@ -908,14 +940,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
                     GestureDetector(
                       onTap: () async {
                         toggleTool('addWayPoint');
-
-                        if (editTools['addWayPoint']!) {
-                          mapController!.onSymbolTapped.add(_onFeatureTapped);
-                        } else {
-                          mapController?.onSymbolTapped
-                              .remove(_onFeatureTapped);
-                        }
-
                         await removeNodeSymbols();
                         setState(() {});
                       },

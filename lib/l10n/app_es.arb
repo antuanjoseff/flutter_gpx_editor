@@ -16,5 +16,11 @@
     "editWpt": "Nombre",
     "confirmDeleteWpt": "Eliminar waypoint?",
     "yes": "YES",
-    "no": "NO"
+    "no": "NO",
+    "moveNodeUndone": "Deshacer mover node",
+    "deleteNodeUndone": "Deshacer eliminar nodo",
+    "addNodeUndone": "Deshacer añadir nodo",
+    "addWaypointUndone": "Deshacer añadir waypoint",
+    "editWaypointUndone": "Deshacer edición waypoint",
+    "deleteWaypointUndone": "Deshacer eliminar waypoint"    
 }

@@ -16,5 +16,12 @@
     "editWpt": "Nom",
     "confirmDeleteWpt": "Eliminar waypoint?",
     "yes": "SÍ",
-    "no": "NO"
+    "no": "NO",
+    "moveNodeUndone": "Desfer moure node",
+    "deleteNodeUndone": "Desfer eliminar node",
+    "addNodeUndone": "Desfer afegir node",
+    "addWaypointUndone": "Desfer afegir waypoint",
+    "editWaypointUndone": "Desfer edició waypoint",
+    "deleteWaypointUndone": "Desfer eliminar waypoint"
+
 }

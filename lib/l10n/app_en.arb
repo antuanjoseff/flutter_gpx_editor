@@ -19,5 +19,11 @@
   "editWpt": "Name",
   "confirmDeleteWpt": "Delete this waypoint?",
   "yes": "YES",
-  "no": "NO"
+  "no": "NO",
+  "moveNodeUndone": "Undo move node",
+  "deleteNodeUndone": "Undo cancel node",
+  "addNodeUndone": "Undo add node",
+  "addWaypointUndone": "Undo add waypoint",
+  "editWaypointUndone": "Undo edit waypoint",
+  "deleteWaypointUndone": "Undo cancel waypoint"
 }

@@ -173,13 +173,13 @@ void showSnackBar(context, String txt) {
         children: [
           Icon(
             Icons.warning_rounded,
-            color: primaryColor,
+            color: white,
           ),
           const SizedBox(width: 20),
           Expanded(
               child: Text(
             txt,
-            style: TextStyle(color: primaryColor),
+            style: TextStyle(color: white),
           )),
         ],
       ),
