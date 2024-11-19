@@ -767,6 +767,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
           trackCameraPosition: true,
           onMapCreated: _onMapCreated,
           onMapClick: handleClick,
+          onMapLongClick: (point, coordinates) {
+            debugPrint('${point}    ${coordinates}   ${initialLocation}');
+
+            mapController!.animateCamera(
+              CameraUpdate.newLatLngZoom(coordinates, 18),
+              duration: const Duration(milliseconds: 200),
+            );
+          },
           onStyleLoadedCallback: () {
             addImageFromAsset(
                 mapController!, "node-plain", "assets/symbols/node-plain.png");
