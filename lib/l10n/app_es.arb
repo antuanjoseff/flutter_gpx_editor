@@ -3,7 +3,7 @@
     "errorOpeningFile": "Error de archivo",
     "fileFormatNotSupported": "Formato de archivo no soportado",
     "onEditFirstTrackSegment": "Sólo se muestra el primer segmento del track",
-    "accept": "Acceptar",
+    "accept": "Aceptar",
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "trackSettings": "Configuración",
