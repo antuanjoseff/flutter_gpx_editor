@@ -170,6 +170,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
+    await mapController!.setSymbolIconAllowOverlap(true);
     mapController!.onSymbolTapped.add(_onFeatureTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
   }
