@@ -86,10 +86,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   bool gpxLoaded = false;
   bool showTools = false;
-  // bool draggableMode = false;
-  // bool addMode = false;
-  // bool deleteMode = false;
-
+  int prevZoom = 0;
   Symbol? selectedSymbol;
 
   int selectedNode = -1;
@@ -170,9 +167,23 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    await mapController!.setSymbolIconAllowOverlap(true);
+    mapController!.addListener(_onMapChanged);
     mapController!.onSymbolTapped.add(_onFeatureTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
+  }
+
+  void _onMapChanged() async {
+    int zoom = mapController!.cameraPosition!.zoom.floor();
+    debugPrint('zoom $zoom    $prevZoom');
+    if (zoom == 19) {
+      prevZoom = 19;
+      await mapController!.setSymbolIconAllowOverlap(true);
+    } else {
+      if (prevZoom == 19) {
+        await mapController!.setSymbolIconAllowOverlap(false);
+        prevZoom = zoom;
+      }
+    }
   }
 
   bool isMoveNodeActive() {
@@ -490,6 +501,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     switch (eventType) {
       case DragEventType.start:
         selectedNode = await searchSymbol(id);
+        if (selectedNode == -1) return;
         selectedSymbol = nodeSymbols[selectedNode];
         edits.add((
           selectedNode,
@@ -610,6 +622,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   Future<void> redrawNodeSymbols() async {
     nodeSymbols = await removeNodeSymbols();
+
     // Only draw nodes if some key is activated
     if (isAnyToolActive()) {
       nodeSymbols = await addNodeSymbols();
