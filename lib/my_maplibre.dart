@@ -12,6 +12,7 @@ import 'util.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'classes/track.dart';
 import 'utils/user_simple_preferences.dart';
+import 'dart:async';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -84,6 +85,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   String? filename;
   String? fileName;
 
+  bool clickPaused = false;
   bool gpxLoaded = false;
   bool showTools = false;
   int prevZoom = 0;
@@ -145,6 +147,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void toggleTool(tool) {
+    clickPaused = true;
+    debugPrint('CLICK PAUSED (toggle in) $clickPaused');
     for (String ktool in editTools.keys) {
       if (ktool == tool) {
         editTools[tool] = !editTools[tool]!;
@@ -152,6 +156,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
         editTools[ktool] = false;
       }
     }
+    var timer = Timer(Duration(seconds: 1), () {
+      clickPaused = false;
+      debugPrint('CLICK PAUSED (toggle out) $clickPaused');
+    });
+    // timer.cancel();
   }
 
   void setEditMode(bool editmode) async {
@@ -259,6 +268,15 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void handleClick(point, clickedPoint) {
+    _isThereCurrentDialogShowing(BuildContext context) =>
+        ModalRoute.of(context)?.isCurrent != true;
+
+    bool opened = _isThereCurrentDialogShowing(context);
+    debugPrint('CLICK PAUSED (handleclick) $clickPaused');
+    debugPrint('ALERT DIALOG  $opened');
+    if (clickPaused) {
+      return;
+    }
     if (editTools['add']! && track!.getCoordsList().isNotEmpty) {
       addNode(point, clickedPoint);
       return;
@@ -272,7 +290,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   Future<(String?, String?)> openDialogNewWpt() async {
     controller.text = "Waypoint ${mapWayPoints.length}";
-
+    clickPaused = true;
     return await showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -302,7 +320,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   Future<(String?, String?)> openDialogEditWpt(Wpt wpt) async {
     controller.text = "${wpt.name}";
-
+    clickPaused = true;
     return await showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -355,6 +373,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<bool> openDialogConfirmWpt() async {
+    clickPaused = true;
     return await showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -366,14 +385,18 @@ class _MyMaplibreState extends State<MyMapLibre> {
                       ElevatedButton(
                           style: styleElevatedButtons,
                           onPressed: () {
-                            Navigator.of(context).pop(true);
+                            var timer = Timer(Duration(milliseconds: 300), () {
+                              Navigator.of(context).pop(true);
+                            });
                           },
                           child: Text(AppLocalizations.of(context)!.yes)),
                       SizedBox(width: 20),
                       ElevatedButton(
                           style: styleElevatedButtons,
                           onPressed: () {
-                            Navigator.of(context).pop(false);
+                            var timer = Timer(Duration(milliseconds: 300), () {
+                              Navigator.of(context).pop(false);
+                            });
                           },
                           child: Text(AppLocalizations.of(context)!.no)),
                     ],
@@ -382,31 +405,46 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void deleteWpt(Wpt wpt) {
-    Navigator.of(context).pop((
-      'delete',
-      wpt.extensions['id'],
-    ));
-    controller.clear();
+    var timer = Timer(Duration(milliseconds: 300), () {
+      clickPaused = false;
+      debugPrint('MANO.....');
+      Navigator.of(context).pop((
+        'delete',
+        wpt.extensions['id'],
+      ));
+      controller.clear();
+    });
   }
 
   void submit(String action) {
-    Navigator.of(context).pop((
-      action,
-      controller.text,
-    ));
-    controller.clear();
+    var timer = Timer(Duration(milliseconds: 300), () {
+      clickPaused = false;
+      debugPrint('MANO.....');
+      Navigator.of(context).pop((
+        action,
+        controller.text,
+      ));
+      controller.clear();
+    });
   }
 
   void cancel() {
-    Navigator.of(context).pop((
-      'cancel',
-      null,
-    ));
+    var timer = Timer(Duration(milliseconds: 300), () {
+      clickPaused = false;
+      Navigator.of(context).pop((
+        'cancel',
+        null,
+      ));
+      controller.clear();
+    });
   }
 
   void addWayPoint(point, clickedPoint) async {
     Symbol wptSymbol = await mapController!.addSymbol(SymbolOptions(
-        draggable: false, iconImage: 'waypoint', geometry: clickedPoint));
+        draggable: false,
+        iconImage: 'waypoint',
+        geometry: clickedPoint,
+        iconOffset: Offset(25, -50)));
 
     var (action, wptName) = await openDialogNewWpt();
 
@@ -614,7 +652,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<List<Symbol>> removeNodeSymbols() async {
-    print('---------------REMOVE MAP SYMBOLS');
     await mapController!.removeSymbols(nodeSymbols);
     nodeSymbols = [];
     return nodeSymbols;
@@ -953,8 +990,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
                     ),
                     GestureDetector(
                       onTap: () async {
-                        toggleTool('addWayPoint');
                         await removeNodeSymbols();
+                        toggleTool('addWayPoint');
                         setState(() {});
                       },
                       child: CircleAvatar(
