@@ -62,6 +62,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   SizedBox(
                     width: kIsWeb ? 600 : 200,
+                    height: kIsWeb ? 500 : null,
                     child: BlockPicker(
                       pickerColor: trackColor,
                       onColorChanged: (color) {
