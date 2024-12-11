@@ -13,6 +13,8 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'classes/track.dart';
 import 'utils/user_simple_preferences.dart';
 import 'dart:async';
+import 'package:flutter_svg_icons/flutter_svg_icons.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -143,9 +145,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     editTools[tool] = true;
   }
 
-  bool isAnyToolActive() {
+  bool isAnyNodesToolActive() {
     for (String kTool in editTools.keys) {
-      if (editTools[kTool] == true) {
+      if (editTools[kTool] == true && kTool != 'addWayPoint') {
         return true;
       }
     }
@@ -163,6 +165,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
     if (editTools['addWayPoint'] == true) {
       await mapController!.setSymbolIconAllowOverlap(true);
+    } else {
+      await mapController!.setSymbolIconAllowOverlap(false);
     }
 
     var timer = Timer(Duration(seconds: 1), () {
@@ -187,11 +191,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
     mapController!.addListener(_onMapChanged);
     mapController!.onSymbolTapped.add(_onFeatureTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
+    if (!kIsWeb) {
+      await mapController!.setSymbolIconAllowOverlap(false);
+    }
   }
 
   void _onMapChanged() async {
     int zoom = mapController!.cameraPosition!.zoom.floor();
-    if (isAnyToolActive()) {
+    if (isAnyNodesToolActive() && kIsWeb) {
       // after last map changed, wait 300ms and redraw nodes
       deb.debounce(() {
         redrawNodeSymbols();
@@ -199,10 +206,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
     if (zoom == 19) {
       prevZoom = 19;
-      // await mapController!.setSymbolIconAllowOverlap(true);
+      await mapController!.setSymbolIconAllowOverlap(true);
     } else {
       if (prevZoom == 19) {
-        // await mapController!.setSymbolIconAllowOverlap(false);
+        await mapController!.setSymbolIconAllowOverlap(false);
         prevZoom = zoom;
       }
     }
@@ -450,7 +457,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
         draggable: false,
         iconImage: 'waypoint',
         geometry: clickedPoint,
-        iconOffset: Offset(50, -50)));
+        iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
 
     var (action, wptName) = await openDialogNewWpt();
 
@@ -640,10 +647,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
     bool draggable = editTools['move']! ? true : false;
     List<LatLng> nodes = track!.getCoordsList();
 
-    double resolution = await mapController!.getMetersPerPixelAtLatitude(
-        mapController!.cameraPosition!.target.latitude);
+    if (kIsWeb) {
+      double resolution = await mapController!.getMetersPerPixelAtLatitude(
+          mapController!.cameraPosition!.target.latitude);
 
-    imagesPadding = ((80 * resolution) / nodesRatio).floor();
+      imagesPadding = ((80 * resolution) / nodesRatio).floor();
+    } else {
+      imagesPadding = 1; // show all
+    }
 
     for (var idx = 0; idx < nodes.length; idx++) {
       if (idx % imagesPadding != 0) {
@@ -674,7 +685,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Future<void> redrawNodeSymbols() async {
     nodeSymbols = await removeNodeSymbols();
     // Only draw nodes if some key is activated
-    if (isAnyToolActive()) {
+    if (isAnyNodesToolActive()) {
       nodeSymbols = await addNodeSymbols();
     }
   }
@@ -884,8 +895,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
                 mapController!, "node-drag", "assets/symbols/node-drag.png");
             addImageFromAsset(mapController!, "node-delete",
                 "assets/symbols/node-delete.png");
-            addImageFromAsset(
-                mapController!, "waypoint", "assets/symbols/waypoint.png");
+            if (kIsWeb) {
+              addImageFromAsset(
+                  mapController!, "waypoint", "assets/symbols/waypoint.png");
+            } else {
+              addImageFromAsset(mapController!, "waypoint",
+                  "assets/symbols/waypoint-mobile.png");
+            }
           },
           initialCameraPosition: const CameraPosition(
             target: LatLng(42.0, 3.0),
@@ -1010,16 +1026,24 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         setState(() {});
                       },
                       child: CircleAvatar(
-                        radius: 25,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.flag,
-                          color: editTools['addWayPoint']!
-                              ? Theme.of(context).canvasColor
-                              : inactiveColor,
-                          size: 35,
-                        ),
-                      ),
+                          radius: 25,
+                          backgroundColor: Colors.white,
+                          child: SvgIcon(
+                              color: editTools['addWayPoint']!
+                                  ? Theme.of(context).canvasColor
+                                  : inactiveColor,
+                              responsiveColor: false,
+                              size: 30,
+                              icon: SvgIconData('assets/symbols/waypoint.svg'))
+
+                          // Icon(
+                          //   Icons.flag,
+                          //   color: editTools['addWayPoint']!
+                          //       ? Theme.of(context).canvasColor
+                          //       : inactiveColor,
+                          //   size: 35,
+                          // ),
+                          ),
                     ),
                   ],
                 ),
