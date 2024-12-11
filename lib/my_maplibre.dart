@@ -308,6 +308,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     clickPaused = true;
     return await showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
                 title: Text(AppLocalizations.of(context)!.wptName),
                 content: TextField(
@@ -338,6 +339,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     clickPaused = true;
     return await showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -391,6 +393,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     clickPaused = true;
     return await showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
                 title: Text(AppLocalizations.of(context)!.confirmDeleteWpt),
                 actions: [
