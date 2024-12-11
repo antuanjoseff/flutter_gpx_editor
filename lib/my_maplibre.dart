@@ -37,6 +37,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
     'addWayPoint': false
   };
 
+  // var to know average distance between track nodes
+  double nodesRatio = 0;
+
+  // var used to calculate number of pixels between track nodes
+  int imagesPadding = 0;
+
   late TextEditingController controller;
 
   ButtonStyle styleElevatedButtons = ElevatedButton.styleFrom(
@@ -95,7 +101,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   String selectedNodeType = '';
 
   final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 300));
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
@@ -146,9 +152,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return false;
   }
 
-  void toggleTool(tool) {
+  void toggleTool(tool) async {
     clickPaused = true;
-    debugPrint('CLICK PAUSED (toggle in) $clickPaused');
     for (String ktool in editTools.keys) {
       if (ktool == tool) {
         editTools[tool] = !editTools[tool]!;
@@ -156,9 +161,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
         editTools[ktool] = false;
       }
     }
+    if (editTools['addWayPoint'] == true) {
+      await mapController!.setSymbolIconAllowOverlap(true);
+    }
+
     var timer = Timer(Duration(seconds: 1), () {
       clickPaused = false;
-      debugPrint('CLICK PAUSED (toggle out) $clickPaused');
     });
     // timer.cancel();
   }
@@ -183,13 +191,18 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   void _onMapChanged() async {
     int zoom = mapController!.cameraPosition!.zoom.floor();
-    debugPrint('zoom $zoom    $prevZoom');
+    if (isAnyToolActive()) {
+      // after last map changed, wait 300ms and redraw nodes
+      deb.debounce(() {
+        redrawNodeSymbols();
+      });
+    }
     if (zoom == 19) {
       prevZoom = 19;
-      await mapController!.setSymbolIconAllowOverlap(true);
+      // await mapController!.setSymbolIconAllowOverlap(true);
     } else {
       if (prevZoom == 19) {
-        await mapController!.setSymbolIconAllowOverlap(false);
+        // await mapController!.setSymbolIconAllowOverlap(false);
         prevZoom = zoom;
       }
     }
@@ -215,7 +228,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
     selectedNode = await searchSymbol(symbol.id);
     if (selectedNode == -1) {
       // then user tapped on a wpt
-      debugPrint('TAPPED ON WPT');
       _tappedOnWpt(symbol);
       return;
     }
@@ -233,7 +245,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void _tappedOnWpt(Symbol search) async {
-    debugPrint('SEARCH SYMBOL ID: ${search.id}');
     int idx = -1;
     for (var i = 0; idx == -1 && i < mapWayPoints.length; i++) {
       if (search.id == mapWayPoints[i].extensions['id']) {
@@ -268,12 +279,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void handleClick(point, clickedPoint) {
-    _isThereCurrentDialogShowing(BuildContext context) =>
-        ModalRoute.of(context)?.isCurrent != true;
+    // _isThereCurrentDialogShowing(BuildContext context) =>
+    //     ModalRoute.of(context)?.isCurrent != true;
 
-    bool opened = _isThereCurrentDialogShowing(context);
-    debugPrint('CLICK PAUSED (handleclick) $clickPaused');
-    debugPrint('ALERT DIALOG  $opened');
     if (clickPaused) {
       return;
     }
@@ -407,7 +415,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void deleteWpt(Wpt wpt) {
     var timer = Timer(Duration(milliseconds: 300), () {
       clickPaused = false;
-      debugPrint('MANO.....');
       Navigator.of(context).pop((
         'delete',
         wpt.extensions['id'],
@@ -419,7 +426,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void submit(String action) {
     var timer = Timer(Duration(milliseconds: 300), () {
       clickPaused = false;
-      debugPrint('MANO.....');
       Navigator.of(context).pop((
         action,
         controller.text,
@@ -444,7 +450,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
         draggable: false,
         iconImage: 'waypoint',
         geometry: clickedPoint,
-        iconOffset: Offset(25, -50)));
+        iconOffset: Offset(50, -50)));
 
     var (action, wptName) = await openDialogNewWpt();
 
@@ -628,13 +634,21 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return 'node-plain';
   }
 
-  List<SymbolOptions> makeSymbolOptions() {
+  Future<List<SymbolOptions>> makeSymbolOptions() async {
     final symbolOptions = <SymbolOptions>[];
     String image = getNodesImage(editTools);
     bool draggable = editTools['move']! ? true : false;
     List<LatLng> nodes = track!.getCoordsList();
 
+    double resolution = await mapController!.getMetersPerPixelAtLatitude(
+        mapController!.cameraPosition!.target.latitude);
+
+    imagesPadding = ((80 * resolution) / nodesRatio).floor();
+
     for (var idx = 0; idx < nodes.length; idx++) {
+      if (idx % imagesPadding != 0) {
+        continue;
+      }
       LatLng coord = nodes[idx];
       symbolOptions.add(SymbolOptions(
           draggable: draggable,
@@ -647,7 +661,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<List<Symbol>> addNodeSymbols() async {
-    nodeSymbols = await mapController!.addSymbols(makeSymbolOptions());
+    nodeSymbols = await mapController!.addSymbols(await makeSymbolOptions());
     return nodeSymbols;
   }
 
@@ -659,7 +673,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   Future<void> redrawNodeSymbols() async {
     nodeSymbols = await removeNodeSymbols();
-
     // Only draw nodes if some key is activated
     if (isAnyToolActive()) {
       nodeSymbols = await addNodeSymbols();
@@ -694,6 +707,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
     track = Track(trackSegment);
     await track!.init();
+    nodesRatio = track!.getLength() / track!.getCoordsList().length;
 
     mapController!.moveCamera(
       CameraUpdate.newLatLngBounds(
@@ -762,7 +776,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<void> undoEditWaypoint(idx, wpt) async {
-    debugPrint('UNDO EDIT WAYPOINT    $idx');
     mapWayPoints[idx].name = wpt.name;
     track!.updateWpt(idx, wpt);
   }
@@ -773,11 +786,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
         iconImage: 'waypoint',
         geometry: LatLng(wpt.lat, wpt.lon)));
 
-    debugPrint('id of new symbol ${wptSymbol.id}');
     wpt.extensions['id'] = wptSymbol.id;
     mapWayPoints.insert(idx, cloneWpt(wpt));
-    debugPrint('id of recovered wpt ${wpt.extensions['id']}');
-
     wptSymbols.insert(idx, wptSymbol);
 
     track!.insertWpt(idx, wpt);
@@ -891,6 +901,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
                 child: GestureDetector(
                   onTap: () {
                     if (edits.isNotEmpty) {
+                      clickPaused = true;
+                      var timer = Timer(Duration(seconds: 1), () {
+                        clickPaused = false;
+                      });
+
                       undo();
                     } else {}
                   },
@@ -1013,4 +1028,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
       ],
     ]);
   }
+}
+
+class EventFlags {
+  bool pointerDownInner = false;
 }
