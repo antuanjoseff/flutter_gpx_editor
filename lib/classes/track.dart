@@ -92,6 +92,7 @@ class Track {
   }
 
   void removeNode(int index) {
+    print('REMOVE NODE .............    $index');
     trackSegment.removeAt(index);
     gpxCoords.removeAt(index);
   }
