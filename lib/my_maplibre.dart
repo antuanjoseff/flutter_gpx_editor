@@ -232,7 +232,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     if (!isDeleteActive() && !isAddWayPointActive()) {
       return;
     }
-    selectedNode = await searchSymbol(symbol.id);
+    var (symbolIdx, nodeIdx) = await searchSymbol(symbol.id);
+    debugPrint('delete $symbolIdx    $nodeIdx');
+    selectedNode = nodeIdx;
     if (selectedNode == -1) {
       // then user tapped on a wpt
       _tappedOnWpt(symbol);
@@ -243,9 +245,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
         (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
 
     track!.removeNode(selectedNode);
-
-    await mapController!.removeSymbol(nodeSymbols[selectedNode]);
-    nodeSymbols.removeAt(selectedNode);
+    await mapController!.removeSymbol(nodeSymbols[symbolIdx]);
+    nodeSymbols.removeAt(symbolIdx);
     redrawNodeSymbols();
     updateTrackLine();
     setState(() {});
@@ -554,14 +555,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
     switch (eventType) {
       case DragEventType.start:
-        selectedNode = await searchSymbol(id);
+        var (symbolIdx, nodeIdx) = await searchSymbol(id);
+        selectedNode = nodeIdx;
         if (selectedNode == -1) return;
-        selectedSymbol = nodeSymbols[selectedNode];
-        edits.add((
-          selectedNode,
-          cloneWpt(track!.trackSegment[selectedNode]),
-          'moved'
-        ));
+        selectedSymbol = nodeSymbols[symbolIdx];
         break;
       case DragEventType.drag:
         thr.throttle(() {
@@ -571,9 +568,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
         });
         break;
       case DragEventType.end:
+        edits.add((
+          selectedNode,
+          cloneWpt(track!.trackSegment[selectedNode]),
+          'moved'
+        ));
         LatLng coordinate = LatLng(current.latitude, current.longitude);
         track!.changeNodeAt(selectedNode, coordinate);
-
         Wpt dragged = track!.getWptAt(selectedNode);
         dragged.lat = coordinate.latitude;
         dragged.lon = coordinate.longitude;
@@ -617,13 +618,29 @@ class _MyMaplibreState extends State<MyMapLibre> {
     setState(() {});
   }
 
-  Future<int> searchSymbol(String search) async {
+  Future<(int, int)> searchSymbol(String search) async {
+    late LatLng geom;
     for (var i = 0; i < nodeSymbols.length; i++) {
       if (nodeSymbols[i].id == search) {
-        return i;
+        geom = LatLng(nodeSymbols[i].options.geometry!.latitude,
+            nodeSymbols[i].options.geometry!.longitude);
+        // debugPrint(
+        //     '-------------${nodeSymbols[i].options.geometry!.latitude} ------${nodeSymbols[i].options.geometry!.longitude}');
+        List<LatLng> coords = track!.getCoordsList();
+        late LatLng coord;
+
+        for (var y = 0; y < coords.length; y++) {
+          coord = coords[y];
+          if (coord.latitude == geom.latitude &&
+              coord.longitude == geom.longitude) {
+            // debugPrint(
+            //     '  AQUEST     ${coord.latitude} xxxxxx   ${coord.longitude}');
+            return (i, y);
+          }
+        }
       }
     }
-    return -1;
+    return (-1, -1);
   }
 
   void _updateSelectedSymbol(Symbol symbol, SymbolOptions changes) async {
