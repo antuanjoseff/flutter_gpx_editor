@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import './vars/vars.dart';
 import 'dart:convert';
 import 'package:gpx_editor/my_maplibre.dart';
@@ -203,6 +205,10 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void setBaseLayer(layer) {
+    _controller.setBaseLayer!(layer);
+  }
+
   @override
   Widget build(BuildContext context) {
     return DoubleTapToExit(
@@ -226,7 +232,9 @@ class _MyHomePageState extends State<MyHomePage> {
           },
           child: SizedBox(
               width: 300,
-              child: Container(color: Colors.white, child: MapLayers())),
+              child: Container(
+                  color: Theme.of(context).canvasColor,
+                  child: MapLayers(controller: _controller))),
         ),
         appBar: AppBar(
           backgroundColor: Theme.of(context).canvasColor,

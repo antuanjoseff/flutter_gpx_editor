@@ -118,6 +118,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.removeNodeSymbols = removeNodeSymbols;
     controller.updateTrack = updateTrack;
     controller.setEditMode = setEditMode;
+    controller.setBaseLayer = setBaseLayer;
+    controller.getCenter = getCenter;
+    controller.getZoom = getZoom;
     controller.getWpts = () {
       return track!.getWpts();
     };
@@ -208,6 +211,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
     // osmStyle = await loadAsset();
   }
 
+  LatLng getCenter() {
+    return mapController!.cameraPosition!.target;
+  }
+
+  double getZoom() {
+    return mapController!.cameraPosition!.zoom;
+  }
+
   void _onMapChanged() async {
     int zoom = mapController!.cameraPosition!.zoom.floor();
     if (isAnyNodesToolActive() && kIsWeb) {
@@ -245,7 +256,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
       return;
     }
     var (symbolIdx, nodeIdx) = await searchSymbol(symbol.id);
-    debugPrint('delete $symbolIdx    $nodeIdx');
     selectedNode = nodeIdx;
     if (selectedNode == -1) {
       // then user tapped on a wpt
@@ -298,21 +308,24 @@ class _MyMaplibreState extends State<MyMapLibre> {
     setState(() {});
   }
 
-  void toggleBaseLayer() {
+  void setBaseLayer(layer) {
+    if (layer == 'orto') {
+      ortoVisible = true;
+    } else {
+      ortoVisible = false;
+    }
     mapController!.setLayerProperties(
         "osm",
         LineLayerProperties.fromJson(
-            {"visibility": ortoVisible ? "visible" : "none"}));
+            {"visibility": !ortoVisible ? "visible" : "none"}));
     mapController!.setLayerProperties(
         "ortoEsri",
         LineLayerProperties.fromJson(
-            {"visibility": !ortoVisible ? "visible" : "none"}));
+            {"visibility": ortoVisible ? "visible" : "none"}));
     mapController!.setLayerProperties(
         "ortoICGC",
         LineLayerProperties.fromJson(
-            {"visibility": !ortoVisible ? "visible" : "none"}));
-
-    ortoVisible = !ortoVisible;
+            {"visibility": ortoVisible ? "visible" : "none"}));
   }
 
   void handleClick(point, clickedPoint) {
@@ -964,12 +977,11 @@ class _MyMaplibreState extends State<MyMapLibre> {
               clickPaused = false;
             });
             Scaffold.of(context).openDrawer();
-            // toggleBaseLayer();
           },
           child: CircleAvatar(
             radius: 25,
-            backgroundColor: edits.isNotEmpty ? primaryColor : white,
-            child: Icon(Icons.layers_rounded),
+            backgroundColor: primaryColor,
+            child: Icon(Icons.layers_rounded, color: Colors.white),
           ),
         ),
       ),
