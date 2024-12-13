@@ -15,6 +15,9 @@ import 'utils/user_simple_preferences.dart';
 import 'dart:async';
 import 'package:flutter_svg_icons/flutter_svg_icons.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
+import 'dart:async' show Future;
+import 'package:flutter/services.dart' show rootBundle;
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -93,6 +96,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
   String? filename;
   String? fileName;
 
+  String mapStyle = 'assets/styles/orto_style.json';
+
+  bool ortoVisible = true;
   bool clickPaused = false;
   bool gpxLoaded = false;
   bool showTools = false;
@@ -125,13 +131,14 @@ class _MyMaplibreState extends State<MyMapLibre> {
     colorIcon1 = defaultColorIcon1;
     colorIcon2 = defaultColorIcon2;
     backgroundColor = backgroundInactive;
-    super.initState();
+
     trackWidth = UserSimplePreferences.getTrackWidth() ?? trackWidth;
     trackColor = UserSimplePreferences.getTrackColor() ?? trackColor;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       backgroundActive = Theme.of(context).canvasColor;
     });
     controller = TextEditingController();
+    super.initState();
   }
 
   void deactivateTools() {
@@ -183,7 +190,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
       print('remove map symbols');
       nodeSymbols = await removeNodeSymbols();
     }
-    setState(() {});
+  }
+
+  Future<String> loadAsset() async {
+    return await rootBundle.loadString('assets/styles/osm_style.json');
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -194,6 +204,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
     if (!kIsWeb) {
       await mapController!.setSymbolIconAllowOverlap(false);
     }
+
+    // osmStyle = await loadAsset();
   }
 
   void _onMapChanged() async {
@@ -287,8 +299,20 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void handleClick(point, clickedPoint) {
-    // _isThereCurrentDialogShowing(BuildContext context) =>
-    //     ModalRoute.of(context)?.isCurrent != true;
+    mapController!.setLayerProperties(
+        "osm",
+        LineLayerProperties.fromJson(
+            {"visibility": ortoVisible ? "visible" : "none"}));
+    mapController!.setLayerProperties(
+        "ortoEsri",
+        LineLayerProperties.fromJson(
+            {"visibility": !ortoVisible ? "visible" : "none"}));
+    mapController!.setLayerProperties(
+        "ortoICGC",
+        LineLayerProperties.fromJson(
+            {"visibility": !ortoVisible ? "visible" : "none"}));
+
+    ortoVisible = !ortoVisible;
 
     if (clickPaused) {
       return;
@@ -927,8 +951,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
             target: LatLng(42.0, 3.0),
             zoom: 0,
           ),
-          styleString:
-              'https://geoserveis.icgc.cat/contextmaps/icgc_orto_hibrida.json'),
+          styleString: mapStyle),
       ...[
         showTools
             ? Positioned(
