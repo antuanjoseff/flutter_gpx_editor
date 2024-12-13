@@ -298,7 +298,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     setState(() {});
   }
 
-  void handleClick(point, clickedPoint) {
+  void toggleBaseLayer() {
     mapController!.setLayerProperties(
         "osm",
         LineLayerProperties.fromJson(
@@ -313,7 +313,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
             {"visibility": !ortoVisible ? "visible" : "none"}));
 
     ortoVisible = !ortoVisible;
+  }
 
+  void handleClick(point, clickedPoint) {
     if (clickPaused) {
       return;
     }
@@ -952,142 +954,173 @@ class _MyMaplibreState extends State<MyMapLibre> {
             zoom: 0,
           ),
           styleString: mapStyle),
-      ...[
-        showTools
-            ? Positioned(
-                left: 10,
-                top: 10,
-                child: GestureDetector(
-                  onTap: () {
-                    if (edits.isNotEmpty) {
-                      clickPaused = true;
-                      var timer = Timer(Duration(seconds: 1), () {
-                        clickPaused = false;
-                      });
-
-                      undo();
-                    } else {}
-                  },
-                  child: CircleAvatar(
-                    radius: 25,
-                    backgroundColor: edits.isNotEmpty ? primaryColor : white,
-                    child:
-                        UndoIcon(color: edits.isEmpty ? inactiveColor : white),
-                  ),
-                ),
-              )
-            : Container()
-      ],
+      Positioned(
+        left: 10,
+        top: 10,
+        child: GestureDetector(
+          onTap: () {
+            clickPaused = true;
+            var timer = Timer(Duration(seconds: 1), () {
+              clickPaused = false;
+            });
+            Scaffold.of(context).openDrawer();
+            // toggleBaseLayer();
+          },
+          child: CircleAvatar(
+            radius: 25,
+            backgroundColor: edits.isNotEmpty ? primaryColor : white,
+            child: Icon(Icons.layers_rounded),
+          ),
+        ),
+      ),
       ...[
         showTools
             ? Positioned(
                 right: 10,
                 top: 10,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    GestureDetector(
-                      onTap: () async {
-                        toggleTool('move');
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            toggleTool('move');
 
-                        colorIcon1 = defaultColorIcon1;
-                        colorIcon2 = defaultColorIcon2;
+                            colorIcon1 = defaultColorIcon1;
+                            colorIcon2 = defaultColorIcon2;
 
-                        if (editTools['move']!) {
-                          colorIcon1 = activeColor1;
-                          colorIcon2 = activeColor2;
-                        }
-                        redrawNodeSymbols();
+                            if (editTools['move']!) {
+                              colorIcon1 = activeColor1;
+                              colorIcon2 = activeColor2;
+                            }
+                            redrawNodeSymbols();
 
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                        radius: 25,
-                        backgroundColor:
-                            editTools['move']! ? backgroundActive : white,
-                        child: MoveIcon(
-                          color1: editTools['move']! ? white : inactiveColor,
-                          color2: const Color(0xffc5dd16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      width: 4,
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        toggleTool('add');
-
-                        colorIcon1 = defaultColorIcon1;
-                        colorIcon2 = defaultColorIcon2;
-
-                        if (editTools['add']!) {
-                          colorIcon1 = activeColor1;
-                          colorIcon2 = activeColor2;
-                        }
-
-                        redrawNodeSymbols();
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                        radius: 25,
-                        backgroundColor:
-                            editTools['add']! ? backgroundActive : white,
-                        child: AddIcon(
-                          color1: editTools['add']! ? white : inactiveColor,
-                          color2: const Color(0xffc5dd16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      width: 4,
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        toggleTool('delete');
-                        await redrawNodeSymbols();
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                        radius: 25,
-                        backgroundColor: editTools['delete']!
-                            ? backgroundActive
-                            : Colors.white,
-                        child: DeleteIcon(
-                          color1: editTools['delete']! ? white : inactiveColor,
-                          color2: const Color(0xffc5dd16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      width: 4,
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        await removeNodeSymbols();
-                        toggleTool('addWayPoint');
-                        setState(() {});
-                      },
-                      child: CircleAvatar(
-                          radius: 25,
-                          backgroundColor: Colors.white,
-                          child: SvgIcon(
-                              color: editTools['addWayPoint']!
-                                  ? Theme.of(context).canvasColor
-                                  : inactiveColor,
-                              responsiveColor: false,
-                              size: 30,
-                              icon: SvgIconData('assets/symbols/waypoint.svg'))
-
-                          // Icon(
-                          //   Icons.flag,
-                          //   color: editTools['addWayPoint']!
-                          //       ? Theme.of(context).canvasColor
-                          //       : inactiveColor,
-                          //   size: 35,
-                          // ),
+                            setState(() {});
+                          },
+                          child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor:
+                                editTools['move']! ? backgroundActive : white,
+                            child: MoveIcon(
+                              color1:
+                                  editTools['move']! ? white : inactiveColor,
+                              color2: const Color(0xffc5dd16),
+                            ),
                           ),
+                        ),
+                        const SizedBox(
+                          width: 4,
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            toggleTool('add');
+
+                            colorIcon1 = defaultColorIcon1;
+                            colorIcon2 = defaultColorIcon2;
+
+                            if (editTools['add']!) {
+                              colorIcon1 = activeColor1;
+                              colorIcon2 = activeColor2;
+                            }
+
+                            redrawNodeSymbols();
+                            setState(() {});
+                          },
+                          child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor:
+                                editTools['add']! ? backgroundActive : white,
+                            child: AddIcon(
+                              color1: editTools['add']! ? white : inactiveColor,
+                              color2: const Color(0xffc5dd16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 4,
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            toggleTool('delete');
+                            await redrawNodeSymbols();
+                            setState(() {});
+                          },
+                          child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor: editTools['delete']!
+                                ? backgroundActive
+                                : Colors.white,
+                            child: DeleteIcon(
+                              color1:
+                                  editTools['delete']! ? white : inactiveColor,
+                              color2: const Color(0xffc5dd16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 4,
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            await removeNodeSymbols();
+                            toggleTool('addWayPoint');
+                            setState(() {});
+                          },
+                          child: CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white,
+                              child: SvgIcon(
+                                  color: editTools['addWayPoint']!
+                                      ? Theme.of(context).canvasColor
+                                      : inactiveColor,
+                                  responsiveColor: false,
+                                  size: 30,
+                                  icon: SvgIconData(
+                                      'assets/symbols/waypoint.svg'))
+
+                              // Icon(
+                              //   Icons.flag,
+                              //   color: editTools['addWayPoint']!
+                              //       ? Theme.of(context).canvasColor
+                              //       : inactiveColor,
+                              //   size: 35,
+                              // ),
+                              ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    ...[
+                      edits.isNotEmpty
+                          ? Positioned(
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (edits.isNotEmpty) {
+                                    clickPaused = true;
+                                    var timer = Timer(Duration(seconds: 1), () {
+                                      clickPaused = false;
+                                    });
+
+                                    undo();
+                                  } else {}
+                                },
+                                child: CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor:
+                                      edits.isNotEmpty ? primaryColor : white,
+                                  child: UndoIcon(
+                                      color: edits.isEmpty
+                                          ? inactiveColor
+                                          : white),
+                                ),
+                              ),
+                            )
+                          : Container()
+                    ],
                   ],
                 ),
               )

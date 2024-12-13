@@ -7,6 +7,7 @@ import 'package:geoxml/geoxml.dart';
 import 'dart:io';
 import 'dart:convert' show utf8;
 import 'controller.dart';
+import 'mapLayers.dart';
 import 'color_picker_page.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -219,10 +220,19 @@ class _MyHomePageState extends State<MyHomePage> {
             textAlign: TextAlign.center),
       ),
       child: Scaffold(
+        drawer: GestureDetector(
+          onTap: () {
+            Navigator.of(context).pop();
+          },
+          child: SizedBox(
+              width: 300,
+              child: Container(color: Colors.white, child: MapLayers())),
+        ),
         appBar: AppBar(
           backgroundColor: Theme.of(context).canvasColor,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
           // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          automaticallyImplyLeading: false,
           title: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [

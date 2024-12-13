@@ -13,7 +13,8 @@
     {
       "id": "osm",
       "type": "raster",
-      "source": "osm" 
+      "source": "osm" ,
+      "layout": {"visibility": "visible"}
     }
   ]
 }
