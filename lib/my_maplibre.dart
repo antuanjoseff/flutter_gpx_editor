@@ -903,7 +903,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   Widget build(BuildContext context) {
     return Stack(children: [
       MapLibreMap(
-          minMaxZoomPreference: MinMaxZoomPreference(0, 19),
+          minMaxZoomPreference: MinMaxZoomPreference(0, 18),
           compassEnabled: false,
           trackCameraPosition: true,
           onMapCreated: _onMapCreated,
