@@ -44,6 +44,9 @@ class _MapLayersState extends State<MapLayers> {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
+            SizedBox(
+              height: 50,
+            ),
             const Text('CAPA BASE',
                 style: TextStyle(color: Colors.white, fontSize: 20)),
             SizedBox(
@@ -63,7 +66,8 @@ class _MapLayersState extends State<MapLayers> {
                     child: MapLibreMap(
                       compassEnabled: false,
                       onMapCreated: _onMapCreated,
-                      styleString: ortoStyle,
+                      minMaxZoomPreference: MinMaxZoomPreference(0, 16),
+                      styleString: 'assets/styles/only_orto_style.json',
                       attributionButtonPosition: attributionButtonPosition,
                       initialCameraPosition: CameraPosition(
                         target: widget.controller.getCenter!(),
@@ -91,8 +95,9 @@ class _MapLayersState extends State<MapLayers> {
                   child: AbsorbPointer(
                     child: MapLibreMap(
                       compassEnabled: false,
-                      styleString: osmStyle,
+                      styleString: 'assets/styles/only_osm_style.json',
                       onMapCreated: _onMapCreated,
+                      minMaxZoomPreference: MinMaxZoomPreference(0, 16),
                       initialCameraPosition: CameraPosition(
                         target: widget.controller.getCenter!(),
                         zoom: widget.controller.getZoom!(),

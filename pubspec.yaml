@@ -75,7 +75,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/styles/osm_style.json
+    - assets/styles/only_osm_style.json
+    - assets/styles/only_orto_style.json
+    - assets/styles/mainmap_style.json
     - assets/symbols/node-plain.png
     - assets/symbols/node-drag.png
     - assets/symbols/node-delete.png

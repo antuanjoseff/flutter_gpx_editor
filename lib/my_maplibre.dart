@@ -195,10 +195,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
-  Future<String> loadAsset() async {
-    return await rootBundle.loadString('assets/styles/osm_style.json');
-  }
-
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
     mapController!.addListener(_onMapChanged);
@@ -207,8 +203,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
     if (!kIsWeb) {
       await mapController!.setSymbolIconAllowOverlap(false);
     }
-
-    // osmStyle = await loadAsset();
   }
 
   LatLng getCenter() {
@@ -966,7 +960,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
             target: LatLng(42.0, 3.0),
             zoom: 0,
           ),
-          styleString: mapStyle),
+          styleString: 'assets/styles/mainmap_style.json'
+          // styleString: mapStyle
+          ),
       Positioned(
         left: 10,
         top: 10,
