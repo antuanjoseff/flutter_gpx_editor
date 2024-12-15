@@ -1,0 +1,40 @@
+{
+  "version": 8,
+  "name": "icgc_orto_hibrida",
+  "metadata": {"maputnik:renderer": "mbgljs"},
+  "center": [1.537786, 41.837539],
+  "zoom": 12,
+  "bearing": 0,
+  "pitch": 0,
+  "sources": {
+    "ortoEsri": {
+      "type": "raster",
+      "tiles": [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      ],
+      "tileSize": 256,
+      "attribution": "ESRI",
+      "maxzoom": 18
+    }
+  },
+  "sprite": "https://geoserveis.icgc.cat/vector-tiles/simbologia/sprites1/sprite",
+	"glyphs": "https://geoserveis.icgc.cat/vector-tiles/simbologia/glyphs/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "maxzoom": 0,
+      "layout": {"visibility": "visible"},
+      "paint": {"background-color": "#f8f4f0"}
+    },
+    {
+      "id": "ortoEsri",
+      "type": "raster",
+      "source": "ortoEsri",
+      "maxzoom": 16,
+      "layout": {"visibility": "visible"}
+    }
+
+  ],
+  "id": "orto"
+}

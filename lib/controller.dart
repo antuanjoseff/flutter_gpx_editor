@@ -10,4 +10,7 @@ class Controller {
   List<Wpt> Function()? getWpts;
   Future<void> Function(LineOptions changes)? updateTrack;
   void Function(bool value)? setEditMode;
+  void Function(String)? setBaseLayer;
+  LatLng Function()? getCenter;
+  double Function()? getZoom;
 }

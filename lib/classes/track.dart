@@ -12,6 +12,9 @@ class Track {
   // Array of coordinates to draw a linestring on map
   List<LatLng> gpxCoords = [];
 
+  // Track Length
+  double length = 0;
+
   // Constructor
   Track(this.trackSegment);
 
@@ -20,7 +23,7 @@ class Track {
 
   Future<void> init() async {
     LatLng cur;
-
+    double inc = 0;
     // Init track bounds with first track point
     bounds = my.Bounds(LatLng(trackSegment.first.lat!, trackSegment.first.lon!),
         LatLng(trackSegment.first.lat!, trackSegment.first.lon!));
@@ -28,9 +31,19 @@ class Track {
     for (var i = 0; i < trackSegment.length; i++) {
       cur = LatLng(trackSegment[i].lat!, trackSegment[i].lon!);
 
+      if (gpxCoords.isNotEmpty) {
+        LatLng prev = gpxCoords[gpxCoords.length - 1];
+        inc = getDistanceFromLatLonInMeters(cur, prev);
+      }
+
       bounds!.expand(cur);
       gpxCoords.add(cur);
+      length += inc;
     }
+  }
+
+  double getLength() {
+    return length;
   }
 
   List<LatLng> getCoordsList() {
