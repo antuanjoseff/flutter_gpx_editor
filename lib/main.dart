@@ -303,25 +303,6 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           actions: [
             ...[
-              trackLoaded
-                  ? CircleAvatar(
-                      backgroundColor: editMode
-                          ? Theme.of(context).secondaryHeaderColor
-                          : Colors.transparent,
-                      child: IconButton(
-                        icon: Icon(Icons.edit,
-                            color: editMode ? primaryColor : white),
-                        tooltip: 'Show Snackbar',
-                        onPressed: () async {
-                          editMode = !editMode;
-                          _controller.setEditMode!(editMode);
-                          setState(() {});
-                        },
-                      ),
-                    )
-                  : Container()
-            ],
-            ...[
               gpxOriginal != null
                   ? IconButton(
                       icon: const Icon(
