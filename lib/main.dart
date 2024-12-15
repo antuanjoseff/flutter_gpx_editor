@@ -226,15 +226,21 @@ class _MyHomePageState extends State<MyHomePage> {
             textAlign: TextAlign.center),
       ),
       child: Scaffold(
-        drawer: GestureDetector(
-          onTap: () {
-            Navigator.of(context).pop();
-          },
-          child: SizedBox(
-              width: 300,
-              child: Container(
-                  color: Theme.of(context).canvasColor,
-                  child: MapLayers(controller: _controller))),
+        onEndDrawerChanged: (isOpen) {
+          setState(() {});
+        },
+        drawerScrimColor: Colors.transparent,
+        endDrawer: Drawer(
+          child: GestureDetector(
+            onTap: () {
+              Navigator.of(context).pop();
+            },
+            child: SizedBox(
+                width: 200,
+                child: Container(
+                    color: Theme.of(context).canvasColor,
+                    child: MapLayers(controller: _controller))),
+          ),
         ),
         appBar: AppBar(
           backgroundColor: Theme.of(context).canvasColor,
