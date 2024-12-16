@@ -9,7 +9,7 @@ import 'package:geoxml/geoxml.dart';
 import 'dart:io';
 import 'dart:convert' show utf8;
 import 'controller.dart';
-import 'mapLayers.dart';
+import 'leftDrawer.dart';
 import 'color_picker_page.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -239,7 +239,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 width: 200,
                 child: Container(
                     color: Theme.of(context).canvasColor,
-                    child: MapLayers(controller: _controller))),
+                    child: LeffDrawer(controller: _controller))),
           ),
         ),
         appBar: AppBar(
@@ -247,67 +247,53 @@ class _MyHomePageState extends State<MyHomePage> {
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
           // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           automaticallyImplyLeading: false,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              GestureDetector(
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.folder,
-                    color: Colors.white,
-                  ),
-                  tooltip: 'Open file',
-                  onPressed: () async {
-                    // FilePickerResult? result =
-                    //     await FilePicker.platform.pickFiles();
-
-                    var (msg, content) = await openTextFile(context);
-                    if (content == '') {
-                      if (msg != '') {
-                        TextDisplay(msg, 'Choose a GPX file');
-                      }
-                      return;
-                    }
-                    if (content != null) {
-                      filename = msg;
-                      // fileName = result.files.single.name.toString();
-
-                      try {
-                        // final stream = await utf8.decoder
-                        //     .bind(File(filename!).openRead())
-                        //     .join();
-                        gpxOriginal = await GeoXml.fromGpxString(content);
-                        if (gpxOriginal!.trks[0].trksegs.length >= 1) {
-                          showSnackBar(
-                            context,
-                            AppLocalizations.of(context)!
-                                .onEditFirstTrackSegment,
-                          );
-                        }
-                        lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-
-                        // await _controller.removeTrackLine!;
-                        editMode = false;
-                        _controller.setEditMode!(editMode);
-                        await _controller.loadTrack!(lineSegment);
-
-                        setState(() {
-                          trackLoaded = true;
-                        });
-                      } on Exception catch (e) {
-                        _dialogBuilder(context);
-                      }
-                    }
-                  },
-                ),
-              ),
-              Text(
-                AppLocalizations.of(context)!.appTitle,
-                style: const TextStyle(color: Colors.white, fontSize: 20),
-              ),
-            ],
+          title: Text(
+            AppLocalizations.of(context)!.appTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 20),
           ),
           actions: [
+            ...[
+              trackLoaded
+                  ? CircleAvatar(
+                      backgroundColor: Colors.transparent,
+                      child: IconButton(
+                        icon: const Icon(Icons.settings, color: Colors.white),
+                        tooltip:
+                            AppLocalizations.of(context)!.tooltipTrackSettings,
+                        onPressed: () async {
+                          editMode = false;
+                          _controller.removeNodeSymbols!();
+                          _controller.setEditMode!(editMode);
+
+                          var result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ColorPickerPage(
+                                    trackColor: trackColor,
+                                    trackWidth: trackWidth),
+                              ));
+                          if (result != null) {
+                            var (Color? trColor, double? trWidth) = result;
+                            trackColor = trColor!;
+                            trackWidth = trWidth!;
+
+                            await UserSimplePreferences.setTrackWidth(trWidth);
+                            await UserSimplePreferences.setTrackColor(
+                                trackColor!);
+
+                            LineOptions changes = LineOptions(
+                                lineColor: trackColor!.toHexStringRGB(),
+                                lineWidth: trackWidth);
+
+                            _controller.updateTrack!(changes);
+                          }
+
+                          setState(() {});
+                        },
+                      ),
+                    )
+                  : Container()
+            ],
             ...[
               gpxOriginal != null
                   ? IconButton(
@@ -315,7 +301,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         Icons.save,
                         color: Colors.white,
                       ),
-                      tooltip: 'Show Snackbar',
+                      tooltip: AppLocalizations.of(context)!.tooltipSaveFile,
                       onPressed: () async {
                         _controller.removeNodeSymbols!();
                         var gpx = GeoXml();
@@ -351,47 +337,56 @@ class _MyHomePageState extends State<MyHomePage> {
                     )
                   : Container()
             ],
-            ...[
-              trackLoaded
-                  ? CircleAvatar(
-                      backgroundColor: Colors.transparent,
-                      child: IconButton(
-                        icon: const Icon(Icons.settings, color: Colors.white),
-                        tooltip: 'Show Snackbar',
-                        onPressed: () async {
-                          editMode = false;
-                          _controller.removeNodeSymbols!();
-                          _controller.setEditMode!(editMode);
+            GestureDetector(
+              child: IconButton(
+                icon: const Icon(
+                  Icons.folder,
+                  color: Colors.white,
+                ),
+                tooltip: AppLocalizations.of(context)!.tooltipOpenFile,
+                onPressed: () async {
+                  // FilePickerResult? result =
+                  //     await FilePicker.platform.pickFiles();
 
-                          var result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ColorPickerPage(
-                                    trackColor: trackColor,
-                                    trackWidth: trackWidth),
-                              ));
-                          if (result != null) {
-                            var (Color? trColor, double? trWidth) = result;
-                            trackColor = trColor!;
-                            trackWidth = trWidth!;
+                  var (msg, content) = await openTextFile(context);
+                  if (content == '') {
+                    if (msg != '') {
+                      TextDisplay(msg, 'Choose a GPX file');
+                    }
+                    return;
+                  }
+                  if (content != null) {
+                    filename = msg;
+                    // fileName = result.files.single.name.toString();
 
-                            await UserSimplePreferences.setTrackWidth(trWidth);
-                            await UserSimplePreferences.setTrackColor(
-                                trackColor!);
+                    try {
+                      // final stream = await utf8.decoder
+                      //     .bind(File(filename!).openRead())
+                      //     .join();
+                      gpxOriginal = await GeoXml.fromGpxString(content);
+                      if (gpxOriginal!.trks[0].trksegs.length >= 1) {
+                        showSnackBar(
+                          context,
+                          AppLocalizations.of(context)!.onEditFirstTrackSegment,
+                        );
+                      }
+                      lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
 
-                            LineOptions changes = LineOptions(
-                                lineColor: trackColor!.toHexStringRGB(),
-                                lineWidth: trackWidth);
+                      // await _controller.removeTrackLine!;
+                      editMode = false;
+                      _controller.setEditMode!(editMode);
+                      await _controller.loadTrack!(lineSegment);
 
-                            _controller.updateTrack!(changes);
-                          }
-
-                          setState(() {});
-                        },
-                      ),
-                    )
-                  : Container()
-            ],
+                      setState(() {
+                        trackLoaded = true;
+                      });
+                    } on Exception catch (e) {
+                      _dialogBuilder(context);
+                    }
+                  }
+                },
+              ),
+            ),
           ],
         ),
         body: MyMapLibre(scaffoldKey: _scaffoldKey, controller: _controller),

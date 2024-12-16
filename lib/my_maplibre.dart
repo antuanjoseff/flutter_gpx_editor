@@ -983,30 +983,29 @@ class _MyMaplibreState extends State<MyMapLibre>
         left: 10,
         top: 10,
         child: Column(children: [
-          GestureDetector(
-            onTap: () {
-              clickPaused = true;
-              var timer = Timer(Duration(seconds: 1), () {
-                clickPaused = false;
-              });
-              setState(() {
-                Scaffold.of(context).openEndDrawer();
-              });
-            },
-            child: CircleAvatar(
-              radius: 25,
-              backgroundColor: Scaffold.of(context).isEndDrawerOpen
-                  ? primaryColor
-                  : Colors.white,
-              child: Icon(
-                Icons.layers_rounded,
-                color: Scaffold.of(context).isEndDrawerOpen
-                    ? Colors.white
-                    : primaryColor,
-              ),
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: Scaffold.of(context).isEndDrawerOpen
+                ? primaryColor
+                : Colors.white,
+            child: IconButton(
+              tooltip: AppLocalizations.of(context)!.baseLayers,
+              icon: Icon(Icons.layers_rounded),
+              color: Scaffold.of(context).isEndDrawerOpen
+                  ? Colors.white
+                  : primaryColor,
+              onPressed: () {
+                clickPaused = true;
+                var timer = Timer(Duration(seconds: 1), () {
+                  clickPaused = false;
+                });
+                setState(() {
+                  Scaffold.of(context).openEndDrawer();
+                });
+              },
             ),
           ),
-          SizedBox(
+          const SizedBox(
             height: 4,
           ),
           ...[
@@ -1017,7 +1016,7 @@ class _MyMaplibreState extends State<MyMapLibre>
                     child: IconButton(
                       icon: Icon(Icons.edit,
                           color: !editMode ? primaryColor : white),
-                      tooltip: 'Show Snackbar',
+                      tooltip: AppLocalizations.of(context)!.tooltipEditTrack,
                       onPressed: () async {
                         editMode = !editMode;
                         setState(() {});
@@ -1029,123 +1028,127 @@ class _MyMaplibreState extends State<MyMapLibre>
           AnimatedSize(
             duration: Duration(milliseconds: 600),
             child: Column(children: [
-              SizedBox(
+              const SizedBox(
                 height: 4,
               ),
-              GestureDetector(
-                onTap: () async {
-                  toggleTool('move');
-
-                  colorIcon1 = defaultColorIcon1;
-                  colorIcon2 = defaultColorIcon2;
-
-                  if (editTools['move']!) {
-                    colorIcon1 = activeColor1;
-                    colorIcon2 = activeColor2;
-                  }
-                  redrawNodeSymbols();
-
-                  setState(() {});
-                },
-                child: CircleAvatar(
-                  radius: editMode ? 25 : 0,
-                  backgroundColor:
-                      editTools['move']! ? backgroundActive : white,
-                  child: MoveIcon(
+              CircleAvatar(
+                radius: editMode ? 25 : 0,
+                backgroundColor: editTools['move']! ? backgroundActive : white,
+                child: IconButton(
+                  tooltip: AppLocalizations.of(context)!.tooltipoMoveIcon,
+                  icon: MoveIcon(
                     color1: editTools['move']! ? white : inactiveColor,
                     color2: const Color(0xffc5dd16),
                   ),
+                  onPressed: () async {
+                    toggleTool('move');
+
+                    colorIcon1 = defaultColorIcon1;
+                    colorIcon2 = defaultColorIcon2;
+
+                    if (editTools['move']!) {
+                      colorIcon1 = activeColor1;
+                      colorIcon2 = activeColor2;
+                    }
+                    redrawNodeSymbols();
+
+                    setState(() {});
+                  },
                 ),
               ),
               const SizedBox(
                 height: 4,
               ),
-              GestureDetector(
-                onTap: () async {
-                  toggleTool('add');
-
-                  colorIcon1 = defaultColorIcon1;
-                  colorIcon2 = defaultColorIcon2;
-
-                  if (editTools['add']!) {
-                    colorIcon1 = activeColor1;
-                    colorIcon2 = activeColor2;
-                  }
-
-                  redrawNodeSymbols();
-                  setState(() {});
-                },
-                child: CircleAvatar(
-                  radius: editMode ? 25 : 0,
-                  backgroundColor: editTools['add']! ? backgroundActive : white,
-                  child: AddIcon(
+              CircleAvatar(
+                radius: editMode ? 25 : 0,
+                backgroundColor: editTools['add']! ? backgroundActive : white,
+                child: IconButton(
+                  tooltip: AppLocalizations.of(context)!.tooltipoAddIcon,
+                  icon: AddIcon(
                     color1: editTools['add']! ? white : inactiveColor,
                     color2: const Color(0xffc5dd16),
                   ),
+                  onPressed: () async {
+                    toggleTool('add');
+
+                    colorIcon1 = defaultColorIcon1;
+                    colorIcon2 = defaultColorIcon2;
+
+                    if (editTools['add']!) {
+                      colorIcon1 = activeColor1;
+                      colorIcon2 = activeColor2;
+                    }
+
+                    redrawNodeSymbols();
+                    setState(() {});
+                  },
                 ),
               ),
               const SizedBox(
                 height: 4,
               ),
-              GestureDetector(
-                onTap: () async {
-                  toggleTool('delete');
-                  await redrawNodeSymbols();
-                  setState(() {});
-                },
-                child: CircleAvatar(
-                  radius: editMode ? 25 : 0,
-                  backgroundColor:
-                      editTools['delete']! ? backgroundActive : Colors.white,
-                  child: DeleteIcon(
+              CircleAvatar(
+                radius: editMode ? 25 : 0,
+                backgroundColor:
+                    editTools['delete']! ? backgroundActive : Colors.white,
+                child: IconButton(
+                  tooltip: AppLocalizations.of(context)!.tooltipoDeleteIcon,
+                  icon: DeleteIcon(
                     color1: editTools['delete']! ? white : inactiveColor,
                     color2: const Color(0xffc5dd16),
                   ),
+                  onPressed: () async {
+                    toggleTool('delete');
+                    await redrawNodeSymbols();
+                    setState(() {});
+                  },
                 ),
               ),
               const SizedBox(
                 height: 4,
               ),
-              GestureDetector(
-                onTap: () async {
-                  await removeNodeSymbols();
-                  toggleTool('addWayPoint');
-                  setState(() {});
-                },
-                child: CircleAvatar(
-                    radius: editMode ? 25 : 0,
-                    backgroundColor: Colors.white,
-                    child: SvgIcon(
+              CircleAvatar(
+                  radius: editMode ? 25 : 0,
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    tooltip: AppLocalizations.of(context)!.tooltipoAddWaypoint,
+                    icon: SvgIcon(
                         color: editTools['addWayPoint']!
                             ? Theme.of(context).canvasColor
                             : inactiveColor,
                         responsiveColor: false,
                         size: 30,
-                        icon: SvgIconData('assets/symbols/waypoint.svg'))),
-              ),
+                        icon: SvgIconData('assets/symbols/waypoint.svg')),
+                    onPressed: () async {
+                      await removeNodeSymbols();
+                      toggleTool('addWayPoint');
+                      setState(() {});
+                    },
+                  )),
               const SizedBox(
                 height: 20,
               ),
               ...[
                 edits.isNotEmpty
                     ? Positioned(
-                        child: GestureDetector(
-                          onTap: () {
-                            if (edits.isNotEmpty) {
-                              clickPaused = true;
-                              var timer = Timer(Duration(seconds: 1), () {
-                                clickPaused = false;
-                              });
-
-                              undo();
-                            } else {}
-                          },
-                          child: CircleAvatar(
-                            radius: editMode ? 25 : 0,
-                            backgroundColor:
-                                edits.isNotEmpty ? primaryColor : white,
-                            child: UndoIcon(
+                        child: CircleAvatar(
+                          radius: editMode ? 25 : 0,
+                          backgroundColor:
+                              edits.isNotEmpty ? primaryColor : white,
+                          child: IconButton(
+                            tooltip: AppLocalizations.of(context)!.tooltipoUndo,
+                            icon: UndoIcon(
                                 color: edits.isEmpty ? inactiveColor : white),
+                            onPressed: () {
+                              if (edits.isNotEmpty) {
+                                clickPaused = true;
+                                var timer = Timer(Duration(seconds: 1), () {
+                                  clickPaused = false;
+                                });
+
+                                undo();
+                              } else {}
+                            },
                           ),
                         ),
                       )

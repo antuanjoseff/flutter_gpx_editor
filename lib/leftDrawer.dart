@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:gpx_editor/vars/vars.dart';
 import 'controller.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-class MapLayers extends StatefulWidget {
+class LeffDrawer extends StatefulWidget {
   final Controller controller;
 
-  const MapLayers({
+  const LeffDrawer({
     Key? key,
     required this.controller,
   }) : super(key: key);
 
   @override
-  State<MapLayers> createState() => _MapLayersState();
+  State<LeffDrawer> createState() => _LeffDrawerState();
 }
 
 MapLibreMapController? mapController;
@@ -29,7 +30,7 @@ _onMapCreated(MapLibreMapController controller) {
   mapController = controller;
 }
 
-class _MapLayersState extends State<MapLayers> {
+class _LeffDrawerState extends State<LeffDrawer> {
   @override
   void initState() {
     // TODO: implement initState
@@ -44,10 +45,23 @@ class _MapLayersState extends State<MapLayers> {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
-            SizedBox(
+            const SizedBox(
               height: 50,
             ),
-            const Text('CAPA BASE',
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_forward),
+                  color: Colors.white,
+                  iconSize: 30,
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+            Text(AppLocalizations.of(context)!.leftDrawerTitle,
                 style: TextStyle(color: Colors.white, fontSize: 20)),
             SizedBox(
               height: 200,
@@ -60,7 +74,7 @@ class _MapLayersState extends State<MapLayers> {
                 child: GestureDetector(
                   onTap: () {
                     widget.controller.setBaseLayer!('orto');
-                    Navigator.of(context).pop();
+                    // Navigator.of(context).pop();
                   },
                   child: AbsorbPointer(
                     child: MapLibreMap(
@@ -71,7 +85,7 @@ class _MapLayersState extends State<MapLayers> {
                       attributionButtonPosition: attributionButtonPosition,
                       initialCameraPosition: CameraPosition(
                         target: widget.controller.getCenter!(),
-                        zoom: widget.controller.getZoom!(),
+                        zoom: widget.controller.getZoom!() - 2,
                       ),
                     ),
                   ),
@@ -90,7 +104,7 @@ class _MapLayersState extends State<MapLayers> {
                 child: GestureDetector(
                   onTap: () {
                     widget.controller.setBaseLayer!('osm');
-                    Navigator.of(context).pop();
+                    // Navigator.of(context).pop();
                   },
                   child: AbsorbPointer(
                     child: MapLibreMap(
@@ -100,7 +114,7 @@ class _MapLayersState extends State<MapLayers> {
                       minMaxZoomPreference: MinMaxZoomPreference(0, 16),
                       initialCameraPosition: CameraPosition(
                         target: widget.controller.getCenter!(),
-                        zoom: widget.controller.getZoom!(),
+                        zoom: widget.controller.getZoom!() - 2,
                       ),
                     ),
                   ),

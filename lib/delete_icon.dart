@@ -21,18 +21,14 @@ class _DeleteIconState extends State<DeleteIcon> {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        Positioned(
-            top: 4,
-            right: 4,
-            child: Icon(Icons.square_rounded, color: widget.color2, size: 25)),
-        Positioned(
-          bottom: 4,
-          left: 4,
-          child: Icon(
-            Icons.cancel,
-            size: 35,
-            color: widget.color1,
-          ),
+        // Positioned(
+        //     top: 4,
+        //     right: 4,
+        //     child: Icon(Icons.square_rounded, color: widget.color2, size: 25)),
+        Icon(
+          Icons.cancel_presentation_rounded,
+          size: 35,
+          color: widget.color1,
         ),
       ],
     );
