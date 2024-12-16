@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class AddIcon extends StatefulWidget {
   // const AddIcon({super.key});
-  final Color color1;
-  final Color color2;
+  final Color color;
+  final double? size;
 
   const AddIcon({
     Key? key,
-    required this.color1,
-    required this.color2,
+    required this.color,
+    required this.size,
   }) : super(key: key);
 
   @override
@@ -21,14 +21,10 @@ class _AddIconState extends State<AddIcon> {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        // Positioned(
-        //     top: 4,
-        //     right: 4,
-        //     child: Icon(Icons.square_rounded, color: widget.color2, size: 25)),
         Icon(
           Icons.add_to_photos_outlined,
-          size: 35,
-          color: widget.color1,
+          size: widget.size,
+          color: widget.color,
         ),
       ],
     );

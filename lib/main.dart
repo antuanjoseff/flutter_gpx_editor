@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart';
-
+import 'package:gpx_editor/vars/vars.dart';
 import './vars/vars.dart';
 import 'dart:convert';
 import 'package:gpx_editor/my_maplibre.dart';
@@ -226,6 +226,7 @@ class _MyHomePageState extends State<MyHomePage> {
             textAlign: TextAlign.center),
       ),
       child: Scaffold(
+        drawerEnableOpenDragGesture: false,
         onEndDrawerChanged: (isOpen) {
           setState(() {});
         },
@@ -255,9 +256,9 @@ class _MyHomePageState extends State<MyHomePage> {
             ...[
               trackLoaded
                   ? CircleAvatar(
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: white,
                       child: IconButton(
-                        icon: const Icon(Icons.settings, color: Colors.white),
+                        icon: Icon(Icons.settings, color: primaryColor),
                         tooltip:
                             AppLocalizations.of(context)!.tooltipTrackSettings,
                         onPressed: () async {
@@ -296,95 +297,108 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
             ...[
               gpxOriginal != null
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.save,
-                        color: Colors.white,
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+                      child: CircleAvatar(
+                        backgroundColor: white,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.save,
+                            color: primaryColor,
+                          ),
+                          tooltip:
+                              AppLocalizations.of(context)!.tooltipSaveFile,
+                          onPressed: () async {
+                            _controller.removeNodeSymbols!();
+                            var gpx = GeoXml();
+                            gpx.creator = "dart-gpx library";
+
+                            gpx.metadata = gpxOriginal!.metadata;
+                            List<Wpt> newGpx = [];
+                            theGpx = _controller.getGpx!();
+                            List<Wpt> wpts = _controller.getWpts!();
+
+                            for (var idx = 0; idx < theGpx.length; idx++) {
+                              Wpt wpt = theGpx[idx];
+                              newGpx.add(wpt);
+                            }
+
+                            Trkseg trkseg = Trkseg(trkpts: newGpx);
+                            gpx.trks = [
+                              Trk(trksegs: [trkseg])
+                            ];
+                            gpx.wpts = wpts;
+
+                            // generate xml string
+                            var gpxString = gpx.toGpxString(pretty: true);
+
+                            String? outputFile =
+                                await FilePicker.platform.saveFile(
+                              dialogTitle: 'Please select an output file:',
+                              bytes: utf8.encode(gpxString),
+                              // bytes: convertStringToUint8List(gpxString),
+                              fileName: '${fileName}_edited.gpx',
+                              allowedExtensions: ['gpx'],
+                            );
+                          },
+                        ),
                       ),
-                      tooltip: AppLocalizations.of(context)!.tooltipSaveFile,
-                      onPressed: () async {
-                        _controller.removeNodeSymbols!();
-                        var gpx = GeoXml();
-                        gpx.creator = "dart-gpx library";
-
-                        gpx.metadata = gpxOriginal!.metadata;
-                        List<Wpt> newGpx = [];
-                        theGpx = _controller.getGpx!();
-                        List<Wpt> wpts = _controller.getWpts!();
-
-                        for (var idx = 0; idx < theGpx.length; idx++) {
-                          Wpt wpt = theGpx[idx];
-                          newGpx.add(wpt);
-                        }
-
-                        Trkseg trkseg = Trkseg(trkpts: newGpx);
-                        gpx.trks = [
-                          Trk(trksegs: [trkseg])
-                        ];
-                        gpx.wpts = wpts;
-
-                        // generate xml string
-                        var gpxString = gpx.toGpxString(pretty: true);
-
-                        String? outputFile = await FilePicker.platform.saveFile(
-                          dialogTitle: 'Please select an output file:',
-                          bytes: utf8.encode(gpxString),
-                          // bytes: convertStringToUint8List(gpxString),
-                          fileName: '${fileName}_edited.gpx',
-                          allowedExtensions: ['gpx'],
-                        );
-                      },
                     )
                   : Container()
             ],
-            GestureDetector(
-              child: IconButton(
-                icon: const Icon(
-                  Icons.folder,
-                  color: Colors.white,
-                ),
-                tooltip: AppLocalizations.of(context)!.tooltipOpenFile,
-                onPressed: () async {
-                  // FilePickerResult? result =
-                  //     await FilePicker.platform.pickFiles();
+            Padding(
+              padding: const EdgeInsets.only(right: 10.0),
+              child: CircleAvatar(
+                backgroundColor: white,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.folder,
+                    color: primaryColor,
+                  ),
+                  tooltip: AppLocalizations.of(context)!.tooltipOpenFile,
+                  onPressed: () async {
+                    // FilePickerResult? result =
+                    //     await FilePicker.platform.pickFiles();
 
-                  var (msg, content) = await openTextFile(context);
-                  if (content == '') {
-                    if (msg != '') {
-                      TextDisplay(msg, 'Choose a GPX file');
-                    }
-                    return;
-                  }
-                  if (content != null) {
-                    filename = msg;
-                    // fileName = result.files.single.name.toString();
-
-                    try {
-                      // final stream = await utf8.decoder
-                      //     .bind(File(filename!).openRead())
-                      //     .join();
-                      gpxOriginal = await GeoXml.fromGpxString(content);
-                      if (gpxOriginal!.trks[0].trksegs.length >= 1) {
-                        showSnackBar(
-                          context,
-                          AppLocalizations.of(context)!.onEditFirstTrackSegment,
-                        );
+                    var (msg, content) = await openTextFile(context);
+                    if (content == '') {
+                      if (msg != '') {
+                        TextDisplay(msg, 'Choose a GPX file');
                       }
-                      lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
-
-                      // await _controller.removeTrackLine!;
-                      editMode = false;
-                      _controller.setEditMode!(editMode);
-                      await _controller.loadTrack!(lineSegment);
-
-                      setState(() {
-                        trackLoaded = true;
-                      });
-                    } on Exception catch (e) {
-                      _dialogBuilder(context);
+                      return;
                     }
-                  }
-                },
+                    if (content != null) {
+                      filename = msg;
+                      // fileName = result.files.single.name.toString();
+
+                      try {
+                        // final stream = await utf8.decoder
+                        //     .bind(File(filename!).openRead())
+                        //     .join();
+                        gpxOriginal = await GeoXml.fromGpxString(content);
+                        if (gpxOriginal!.trks[0].trksegs.length >= 1) {
+                          showSnackBar(
+                            context,
+                            AppLocalizations.of(context)!
+                                .onEditFirstTrackSegment,
+                          );
+                        }
+                        lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
+
+                        // await _controller.removeTrackLine!;
+                        editMode = false;
+                        _controller.setEditMode!(editMode);
+                        await _controller.loadTrack!(lineSegment);
+
+                        setState(() {
+                          trackLoaded = true;
+                        });
+                      } on Exception catch (e) {
+                        _dialogBuilder(context);
+                      }
+                    }
+                  },
+                ),
               ),
             ),
           ],
