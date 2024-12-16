@@ -21,6 +21,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:file_saver/file_saver.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -226,7 +227,7 @@ class _MyHomePageState extends State<MyHomePage> {
             textAlign: TextAlign.center),
       ),
       child: Scaffold(
-        drawerEnableOpenDragGesture: false,
+        endDrawerEnableOpenDragGesture: false,
         onEndDrawerChanged: (isOpen) {
           setState(() {});
         },
@@ -331,15 +332,30 @@ class _MyHomePageState extends State<MyHomePage> {
 
                             // generate xml string
                             var gpxString = gpx.toGpxString(pretty: true);
+                            final List<int> codeUnits = gpxString.codeUnits;
+                            final Uint8List unit8Content =
+                                Uint8List.fromList(codeUnits);
 
-                            String? outputFile =
-                                await FilePicker.platform.saveFile(
-                              dialogTitle: 'Please select an output file:',
-                              bytes: utf8.encode(gpxString),
-                              // bytes: convertStringToUint8List(gpxString),
-                              fileName: '${fileName}_edited.gpx',
-                              allowedExtensions: ['gpx'],
-                            );
+                            if (kIsWeb) {
+                              var (action, name) = await _controller
+                                  .showDialogSaveFile!("edited_${filename}");
+
+                              if (name != null && action != 'cancel') {
+                                FileSaver.instance.saveFile(
+                                    name: name,
+                                    bytes: unit8Content,
+                                    ext: 'gpx');
+                              }
+                            } else {
+                              String? outputFile =
+                                  await FilePicker.platform.saveFile(
+                                dialogTitle: 'Please select an output file:',
+                                bytes: utf8.encode(gpxString),
+                                // bytes: convertStringToUint8List(gpxString),
+                                fileName: 'edited_${filename}',
+                                allowedExtensions: ['gpx'],
+                              );
+                            }
                           },
                         ),
                       ),

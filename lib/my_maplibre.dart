@@ -127,6 +127,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     controller.setBaseLayer = setBaseLayer;
     controller.getCenter = getCenter;
     controller.getZoom = getZoom;
+    controller.showDialogSaveFile = showDialogSaveFile;
     controller.getWpts = () {
       return track!.getWpts();
     };
@@ -232,11 +233,11 @@ class _MyMaplibreState extends State<MyMapLibre>
         redrawNodeSymbols();
       });
     }
-    if (zoom == 19) {
-      prevZoom = 19;
+    if (zoom == 18) {
+      prevZoom = 18;
       await mapController!.setSymbolIconAllowOverlap(true);
     } else {
-      if (prevZoom == 19) {
+      if (prevZoom == 18) {
         await mapController!.setSymbolIconAllowOverlap(false);
         prevZoom = zoom;
       }
@@ -348,8 +349,12 @@ class _MyMaplibreState extends State<MyMapLibre>
     }
   }
 
-  Future<(String?, String?)> openDialogNewWpt() async {
-    controller.text = "Waypoint ${mapWayPoints.length}";
+  Future<(String?, String?)> showDialogSaveFile(String value) async {
+    return await openDialogInputText(value);
+  }
+
+  Future<(String?, String?)> openDialogInputText(String value) async {
+    controller.text = value;
     clickPaused = true;
     return await showDialog(
         context: context,
@@ -511,7 +516,8 @@ class _MyMaplibreState extends State<MyMapLibre>
         geometry: clickedPoint,
         iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
 
-    var (action, wptName) = await openDialogNewWpt();
+    var (action, wptName) =
+        await openDialogInputText("Waypoint ${mapWayPoints.length}");
 
     if (wptName != null) {
       Wpt wpt = Wpt(
@@ -719,7 +725,8 @@ class _MyMaplibreState extends State<MyMapLibre>
       double resolution = await mapController!.getMetersPerPixelAtLatitude(
           mapController!.cameraPosition!.target.latitude);
 
-      imagesPadding = ((80 * resolution) / nodesRatio).floor();
+      imagesPadding = ((40 * resolution) / nodesRatio).floor();
+      imagesPadding = 1;
     } else {
       imagesPadding = 1; // show all
     }
