@@ -76,15 +76,18 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/styles/only_osm_style.json
-    - assets/styles/only_orto_style.json
-    - assets/styles/mainmap_style.json
-    - assets/symbols/node-plain.png
-    - assets/symbols/node-drag.png
-    - assets/symbols/node-delete.png
-    - assets/symbols/waypoint.png
-    - assets/symbols/waypoint-mobile.png
-    - assets/symbols/waypoint.svg
+    - assets/styles/
+    # - assets/styles/only_osm_style.json
+    # - assets/styles/only_orto_style.json
+    # - assets/styles/mainmap_style.json
+    - assets/symbols/
+    # - assets/symbols/node-plain.png
+    # - assets/symbols/node-plain-web.png
+    # - assets/symbols/node-drag.png
+    # - assets/symbols/node-delete.png
+    # - assets/symbols/waypoint.png
+    # - assets/symbols/waypoint-mobile.png
+    # - assets/symbols/waypoint.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -385,12 +385,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     }
                     if (content != null) {
                       filename = msg;
-                      // fileName = result.files.single.name.toString();
 
                       try {
-                        // final stream = await utf8.decoder
-                        //     .bind(File(filename!).openRead())
-                        //     .join();
                         gpxOriginal = await GeoXml.fromGpxString(content);
                         if (gpxOriginal!.trks[0].trksegs.length >= 1) {
                           showSnackBar(
@@ -403,8 +399,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
                         // await _controller.removeTrackLine!;
                         editMode = false;
-                        _controller.setEditMode!(editMode);
                         await _controller.loadTrack!(lineSegment);
+                        _controller.setEditMode!(editMode);
 
                         setState(() {
                           trackLoaded = true;

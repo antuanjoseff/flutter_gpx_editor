@@ -21,10 +21,14 @@ class _DeleteIconState extends State<DeleteIcon> {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        Icon(
-          Icons.cancel_presentation_rounded,
-          size: widget.size,
-          color: widget.color,
+        AnimatedScale(
+          scale: widget.size! != 0 ? 1 : 0,
+          duration: Duration(milliseconds: 300),
+          child: Icon(
+            Icons.cancel_presentation_rounded,
+            size: widget.size,
+            color: widget.color,
+          ),
         ),
       ],
     );

@@ -92,6 +92,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   List<Wpt> mapWayPoints = []; //Gpx WPTS
 
   bool editMode = false;
+  bool disableMapChanged = false;
 
   List<(int, Wpt, String)> edits = [];
 
@@ -112,10 +113,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   String selectedNodeType = '';
 
   final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 300));
-
-  late AnimationController _animationController;
-  late Animation<double> _animation;
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 150));
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
@@ -149,15 +147,12 @@ class _MyMaplibreState extends State<MyMapLibre>
     });
     controller = TextEditingController();
     super.initState();
-    _animationController =
-        AnimationController(vsync: this, duration: Duration(milliseconds: 500));
-    _animation =
-        CurvedAnimation(parent: _animationController, curve: Curves.ease);
   }
 
   void deactivateTools() {
     for (String tool in editTools.keys) {
       editTools[tool] = false;
+      removeNodeSymbols();
     }
   }
 
@@ -198,10 +193,8 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   void setEditMode(bool editmode) async {
     showTools = editmode;
-    if (editmode) {
-      // nodeSymbols = await addNodeSymbols();
-      _animationController.forward();
-    } else {
+    if (!editmode) {
+      debugPrint('REMOVE NODE SYMBOLS');
       nodeSymbols = await removeNodeSymbols();
     }
     setState(() {});
@@ -209,12 +202,13 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    mapController!.addListener(_onMapChanged);
+    // mapController!.addListener(_onMapChanged);
     mapController!.onSymbolTapped.add(_onFeatureTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
-    if (!kIsWeb) {
-      await mapController!.setSymbolIconAllowOverlap(false);
-    }
+    await mapController!.setSymbolIconAllowOverlap(true);
+    // if (!kIsWeb) {
+    //   await mapController!.setSymbolIconAllowOverlap(false);
+    // }
   }
 
   LatLng getCenter() {
@@ -226,13 +220,18 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   void _onMapChanged() async {
+    if (disableMapChanged) return;
     int zoom = mapController!.cameraPosition!.zoom.floor();
     if (isAnyNodesToolActive() && kIsWeb) {
       // after last map changed, wait 300ms and redraw nodes
-      deb.debounce(() {
-        redrawNodeSymbols();
+      deb.debounce(() async {
+        disableMapChanged = true;
+        await redrawNodeSymbols();
+        disableMapChanged = false;
       });
     }
+
+    await mapController!.setSymbolIconAllowOverlap(true);
     if (zoom == 18) {
       prevZoom = 18;
       await mapController!.setSymbolIconAllowOverlap(true);
@@ -605,14 +604,16 @@ class _MyMaplibreState extends State<MyMapLibre>
       required origin,
       required point,
       required eventType}) async {
-    if (!isMoveNodeActive()) return;
+    // if (!isMoveNodeActive()) return;
 
     switch (eventType) {
       case DragEventType.start:
         var (symbolIdx, nodeIdx) = await searchSymbol(id);
         selectedNode = nodeIdx;
+
         if (selectedNode == -1) return;
         selectedSymbol = nodeSymbols[symbolIdx];
+
         break;
       case DragEventType.drag:
         thr.throttle(() {
@@ -637,6 +638,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         updateTrackLine();
         await redrawNodeSymbols();
         setState(() {});
+
         break;
     }
   }
@@ -674,12 +676,12 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   Future<(int, int)> searchSymbol(String search) async {
     late LatLng geom;
+
     for (var i = 0; i < nodeSymbols.length; i++) {
       if (nodeSymbols[i].id == search) {
         geom = LatLng(nodeSymbols[i].options.geometry!.latitude,
             nodeSymbols[i].options.geometry!.longitude);
-        // debugPrint(
-        //     '-------------${nodeSymbols[i].options.geometry!.latitude} ------${nodeSymbols[i].options.geometry!.longitude}');
+
         List<LatLng> coords = track!.getCoordsList();
         late LatLng coord;
 
@@ -687,8 +689,6 @@ class _MyMaplibreState extends State<MyMapLibre>
           coord = coords[y];
           if (coord.latitude == geom.latitude &&
               coord.longitude == geom.longitude) {
-            // debugPrint(
-            //     '  AQUEST     ${coord.latitude} xxxxxx   ${coord.longitude}');
             return (i, y);
           }
         }
@@ -716,7 +716,6 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<List<SymbolOptions>> makeSymbolOptions() async {
-    final symbolOptions = <SymbolOptions>[];
     String image = getNodesImage(editTools);
     bool draggable = editTools['move']! ? true : false;
     List<LatLng> nodes = track!.getCoordsList();
@@ -726,11 +725,11 @@ class _MyMaplibreState extends State<MyMapLibre>
           mapController!.cameraPosition!.target.latitude);
 
       imagesPadding = ((40 * resolution) / nodesRatio).floor();
-      imagesPadding = 1;
     } else {
       imagesPadding = 1; // show all
     }
 
+    final symbolOptions = <SymbolOptions>[];
     for (var idx = 0; idx < nodes.length; idx++) {
       if (idx % imagesPadding != 0) {
         continue;
@@ -752,14 +751,15 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<List<Symbol>> removeNodeSymbols() async {
-    await mapController!.removeSymbols(nodeSymbols);
-    nodeSymbols = [];
+    if (nodeSymbols.isNotEmpty) {
+      await mapController!.removeSymbols(nodeSymbols);
+      nodeSymbols = [];
+    }
     return nodeSymbols;
   }
 
   Future<void> redrawNodeSymbols() async {
     nodeSymbols = await removeNodeSymbols();
-    // Only draw nodes if some key is activated
     if (isAnyNodesToolActive()) {
       nodeSymbols = await addNodeSymbols();
     }
@@ -789,9 +789,11 @@ class _MyMaplibreState extends State<MyMapLibre>
       edits = [];
       track!.reset();
     }
-
     track = Track(trackSegment);
+    debugPrint('NODES RATIO 6');
     await track!.init();
+
+    debugPrint('NODES RATIO 7');
     nodesRatio = track!.getLength() / track!.getCoordsList().length;
 
     mapController!.moveCamera(
@@ -965,16 +967,22 @@ class _MyMaplibreState extends State<MyMapLibre>
           onMapCreated: _onMapCreated,
           onMapClick: handleClick,
           onStyleLoadedCallback: () {
-            addImageFromAsset(
-                mapController!, "node-plain", "assets/symbols/node-plain.png");
-            addImageFromAsset(
-                mapController!, "node-drag", "assets/symbols/node-drag.png");
-            addImageFromAsset(mapController!, "node-delete",
-                "assets/symbols/node-delete.png");
             if (kIsWeb) {
+              addImageFromAsset(mapController!, "node-plain",
+                  "assets/symbols/node-plain-web.png");
+              addImageFromAsset(mapController!, "node-drag",
+                  "assets/symbols/node-drag-web.png");
+              addImageFromAsset(mapController!, "node-delete",
+                  "assets/symbols/node-delete-web.png");
               addImageFromAsset(
                   mapController!, "waypoint", "assets/symbols/waypoint.png");
             } else {
+              addImageFromAsset(mapController!, "node-plain",
+                  "assets/symbols/node-plain.png");
+              addImageFromAsset(
+                  mapController!, "node-drag", "assets/symbols/node-drag.png");
+              addImageFromAsset(mapController!, "node-delete",
+                  "assets/symbols/node-delete.png");
               addImageFromAsset(mapController!, "waypoint",
                   "assets/symbols/waypoint-mobile.png");
             }
@@ -1073,7 +1081,6 @@ class _MyMaplibreState extends State<MyMapLibre>
                         colorIcon2 = activeColor2;
                       }
                       redrawNodeSymbols();
-
                       setState(() {});
                     },
                   ),
@@ -1149,12 +1156,17 @@ class _MyMaplibreState extends State<MyMapLibre>
                     child: IconButton(
                       tooltip:
                           AppLocalizations.of(context)!.tooltipoAddWaypoint,
-                      icon: SvgIcon(
-                          color:
-                              editTools['addWayPoint']! ? white : primaryColor,
-                          responsiveColor: false,
-                          size: 30,
-                          icon: SvgIconData('assets/symbols/waypoint.svg')),
+                      icon: AnimatedScale(
+                        scale: editMode ? 1 : 0,
+                        duration: Duration(milliseconds: 300),
+                        child: SvgIcon(
+                            color: editTools['addWayPoint']!
+                                ? white
+                                : primaryColor,
+                            responsiveColor: false,
+                            size: 30,
+                            icon: SvgIconData('assets/symbols/waypoint.svg')),
+                      ),
                       onPressed: () async {
                         await removeNodeSymbols();
                         toggleTool('addWayPoint');

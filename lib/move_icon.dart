@@ -21,10 +21,14 @@ class _MoveIconState extends State<MoveIcon> {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        Icon(
-          Icons.control_camera_rounded,
-          size: widget.size,
-          color: widget.color,
+        AnimatedScale(
+          scale: widget.size! != 0 ? 1 : 0,
+          duration: Duration(milliseconds: 300),
+          child: Icon(
+            Icons.control_camera_rounded,
+            size: widget.size,
+            color: widget.color,
+          ),
         ),
       ],
     );
