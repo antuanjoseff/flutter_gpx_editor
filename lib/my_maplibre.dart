@@ -47,9 +47,6 @@ class _MyMaplibreState extends State<MyMapLibre>
   // var to know average distance between track nodes
   double nodesRatio = 0;
 
-  // var used to calculate number of pixels between track nodes
-  int imagesPadding = 0;
-
   late TextEditingController controller;
 
   ButtonStyle styleElevatedButtons = ElevatedButton.styleFrom(
@@ -87,6 +84,9 @@ class _MyMaplibreState extends State<MyMapLibre>
   Line? trackLine;
   List<Symbol> nodeSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
+  List<Symbol> manipulatedSymbols = [];
+  List<int> manipulatedIndexes =
+      []; //indexes of nodes in track coordinates that have been manipulated.
 
   List<Symbol> wptSymbols = [];
   List<Wpt> mapWayPoints = []; //Gpx WPTS
@@ -99,6 +99,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   String? filename;
   String? fileName;
 
+  late Stopwatch stopwatch;
   String mapStyle = 'assets/styles/orto_style.json';
 
   bool trackLoaded = false;
@@ -112,8 +113,8 @@ class _MyMaplibreState extends State<MyMapLibre>
   int selectedNode = -1;
   String selectedNodeType = '';
 
-  final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 150));
+  final thr = Throttling<void>(duration: const Duration(milliseconds: 100));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 500));
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
@@ -179,30 +180,24 @@ class _MyMaplibreState extends State<MyMapLibre>
         editTools[ktool] = false;
       }
     }
-    if (editTools['addWayPoint'] == true) {
-      await mapController!.setSymbolIconAllowOverlap(true);
-    } else {
-      await mapController!.setSymbolIconAllowOverlap(false);
-    }
+    await mapController!.setSymbolIconAllowOverlap(true);
 
     var timer = Timer(Duration(seconds: 1), () {
       clickPaused = false;
     });
-    // timer.cancel();
   }
 
   void setEditMode(bool editmode) async {
     showTools = editmode;
     if (!editmode) {
-      debugPrint('REMOVE NODE SYMBOLS');
-      nodeSymbols = await removeNodeSymbols();
+      await removeNodeSymbols();
     }
     setState(() {});
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
-    // mapController!.addListener(_onMapChanged);
+    mapController!.addListener(_onMapChanged);
     mapController!.onSymbolTapped.add(_onFeatureTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
     await mapController!.setSymbolIconAllowOverlap(true);
@@ -222,6 +217,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   void _onMapChanged() async {
     if (disableMapChanged) return;
     int zoom = mapController!.cameraPosition!.zoom.floor();
+
     if (isAnyNodesToolActive() && kIsWeb) {
       // after last map changed, wait 300ms and redraw nodes
       deb.debounce(() async {
@@ -231,16 +227,16 @@ class _MyMaplibreState extends State<MyMapLibre>
       });
     }
 
-    await mapController!.setSymbolIconAllowOverlap(true);
-    if (zoom == 18) {
-      prevZoom = 18;
-      await mapController!.setSymbolIconAllowOverlap(true);
-    } else {
-      if (prevZoom == 18) {
-        await mapController!.setSymbolIconAllowOverlap(false);
-        prevZoom = zoom;
-      }
-    }
+    // await mapController!.setSymbolIconAllowOverlap(true);
+    // if (zoom == 18) {
+    //   prevZoom = 18;
+    //   await mapController!.setSymbolIconAllowOverlap(true);
+    // } else {
+    //   if (prevZoom == 18) {
+    //     await mapController!.setSymbolIconAllowOverlap(false);
+    //     prevZoom = zoom;
+    //   }
+    // }
   }
 
   bool isMoveNodeActive() {
@@ -333,7 +329,7 @@ class _MyMaplibreState extends State<MyMapLibre>
             {"visibility": ortoVisible ? "visible" : "none"}));
   }
 
-  void handleClick(point, clickedPoint) {
+  void handleClick(point, clickedPoint) async {
     if (clickPaused) {
       return;
     }
@@ -621,6 +617,7 @@ class _MyMaplibreState extends State<MyMapLibre>
               selectedNode, LatLng(current.latitude, current.longitude));
           updateTrackLine();
         });
+
         break;
       case DragEventType.end:
         edits.add((
@@ -634,7 +631,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         dragged.lat = coordinate.latitude;
         dragged.lon = coordinate.longitude;
         track!.setWptAt(selectedNode, dragged);
-
+        manipulatedIndexes.add(selectedNode);
         updateTrackLine();
         await redrawNodeSymbols();
         setState(() {});
@@ -715,26 +712,59 @@ class _MyMaplibreState extends State<MyMapLibre>
     return 'node-plain';
   }
 
-  Future<List<SymbolOptions>> makeSymbolOptions() async {
+  bool nodeInManipulatedIndexes(int searchIdx) {
+    for (int i = 0; i < manipulatedIndexes.length; i++) {
+      if (manipulatedIndexes.contains(searchIdx)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool coordInBounds(LatLng coord, LatLngBounds viewBounds) {
+    return ((viewBounds.northeast.latitude >= coord.latitude &&
+            viewBounds.northeast.longitude >= coord.longitude) &&
+        (viewBounds.southwest.latitude <= coord.latitude &&
+            viewBounds.southwest.longitude <= coord.longitude));
+  }
+
+  Future<List<SymbolOptions>> makeSymbolOptions(List<LatLng> nodes) async {
     String image = getNodesImage(editTools);
     bool draggable = editTools['move']! ? true : false;
-    List<LatLng> nodes = track!.getCoordsList();
+// var used to calculate number of pixels between track nodes
+    int symbolsPadding = 0;
 
     if (kIsWeb) {
-      double resolution = await mapController!.getMetersPerPixelAtLatitude(
-          mapController!.cameraPosition!.target.latitude);
+      if (mapController!.cameraPosition!.zoom.floor() >= 17) {
+        symbolsPadding = 1;
+      } else {
+        double resolution = await mapController!.getMetersPerPixelAtLatitude(
+            mapController!.cameraPosition!.target.latitude);
 
-      imagesPadding = ((40 * resolution) / nodesRatio).floor();
+        symbolsPadding = ((40 * resolution) / nodesRatio).floor();
+      }
     } else {
-      imagesPadding = 1; // show all
+      symbolsPadding = 1; // show all
+    }
+    if (mapController!.cameraPosition!.zoom.floor() == 18) {
+      symbolsPadding = 1;
     }
 
+    debugPrint(
+        'symbolsPadding $symbolsPadding   ${mapController!.cameraPosition!.zoom.floor()}');
     final symbolOptions = <SymbolOptions>[];
     for (var idx = 0; idx < nodes.length; idx++) {
-      if (idx % imagesPadding != 0) {
+      LatLng coord = nodes[idx];
+
+      if (idx % symbolsPadding != 0 && !nodeInManipulatedIndexes(idx)) {
         continue;
       }
-      LatLng coord = nodes[idx];
+
+      // LatLngBounds viewBounds = await mapController!.getVisibleRegion();
+      // if (!coordInBounds(coord, viewBounds)) {
+      //   continue;
+      // }
+
       symbolOptions.add(SymbolOptions(
           draggable: draggable,
           iconImage: image,
@@ -746,20 +776,31 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<List<Symbol>> addNodeSymbols() async {
-    nodeSymbols = await mapController!.addSymbols(await makeSymbolOptions());
-    return nodeSymbols;
+    List<LatLng> coords = track!.getCoordsList();
+    nodeSymbols =
+        await mapController!.addSymbols(await makeSymbolOptions(coords));
+
+    List<LatLng> manipulatedCoords = [
+      for (var idx in manipulatedIndexes) coords[idx]
+    ];
+
+    manipulatedSymbols = await mapController!
+        .addSymbols(await makeSymbolOptions(manipulatedCoords));
+
+    return [...nodeSymbols, ...manipulatedSymbols];
   }
 
-  Future<List<Symbol>> removeNodeSymbols() async {
+  Future<void> removeNodeSymbols() async {
     if (nodeSymbols.isNotEmpty) {
       await mapController!.removeSymbols(nodeSymbols);
+      await mapController!.removeSymbols(manipulatedSymbols);
       nodeSymbols = [];
+      manipulatedSymbols = [];
     }
-    return nodeSymbols;
   }
 
   Future<void> redrawNodeSymbols() async {
-    nodeSymbols = await removeNodeSymbols();
+    await removeNodeSymbols();
     if (isAnyNodesToolActive()) {
       nodeSymbols = await addNodeSymbols();
     }
@@ -785,15 +826,12 @@ class _MyMaplibreState extends State<MyMapLibre>
     showTools = false;
     if (trackLine != null) {
       removeTrackLine();
-      nodeSymbols = await removeNodeSymbols();
+      await removeNodeSymbols();
       edits = [];
       track!.reset();
     }
     track = Track(trackSegment);
-    debugPrint('NODES RATIO 6');
     await track!.init();
-
-    debugPrint('NODES RATIO 7');
     nodesRatio = track!.getLength() / track!.getCoordsList().length;
 
     mapController!.moveCamera(
