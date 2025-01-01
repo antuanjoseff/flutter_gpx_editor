@@ -13,4 +13,5 @@ class Controller {
   void Function(String)? setBaseLayer;
   LatLng Function()? getCenter;
   double Function()? getZoom;
+  Future<(String?, String?)> Function(String)? showDialogSaveFile;
 }

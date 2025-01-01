@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class MoveIcon extends StatefulWidget {
   // const MoveIcon({super.key});
-  final Color color1;
-  final Color color2;
+  final Color color;
+  final double? size;
 
   const MoveIcon({
     Key? key,
-    required this.color1,
-    required this.color2,
+    required this.color,
+    required this.size,
   }) : super(key: key);
 
   @override
@@ -21,17 +21,13 @@ class _MoveIconState extends State<MoveIcon> {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        Positioned(
-            top: 4,
-            right: 4,
-            child: Icon(Icons.square_rounded, color: widget.color2, size: 25)),
-        Positioned(
-          bottom: 4,
-          left: 4,
+        AnimatedScale(
+          scale: widget.size! != 0 ? 1 : 0,
+          duration: Duration(milliseconds: 300),
           child: Icon(
             Icons.control_camera_rounded,
-            size: 35,
-            color: widget.color1,
+            size: widget.size,
+            color: widget.color,
           ),
         ),
       ],

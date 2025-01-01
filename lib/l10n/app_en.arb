@@ -25,5 +25,16 @@
   "addNodeUndone": "Undo add node",
   "addWaypointUndone": "Undo add waypoint",
   "editWaypointUndone": "Undo edit waypoint",
-  "deleteWaypointUndone": "Undo cancel waypoint"
+  "deleteWaypointUndone": "Undo cancel waypoint",
+  "leftDrawerTitle": "BASE LAYER",
+  "tooltipOpenFile": "Open file",
+  "tooltipTrackSettings": "Settings",
+  "tooltipSaveFile": "Save file",
+  "tooltipEditTrack": "Edit",
+  "baseLayers": "Layers",
+  "tooltipoMoveIcon": "Move nodes",
+  "tooltipoAddIcon": "Add node",
+  "tooltipoDeleteIcon": "Delete node",
+  "tooltipoAddWaypoint": "Add waypoint",
+  "tooltipoUndo": "undo"
 }

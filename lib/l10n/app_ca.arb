@@ -22,6 +22,16 @@
     "addNodeUndone": "Desfer afegir node",
     "addWaypointUndone": "Desfer afegir waypoint",
     "editWaypointUndone": "Desfer edició waypoint",
-    "deleteWaypointUndone": "Desfer eliminar waypoint"
-
+    "deleteWaypointUndone": "Desfer eliminar waypoint",
+    "leftDrawerTitle": "CAPA BASE",
+    "tooltipOpenFile": "Obrir arxiu",
+    "tooltipTrackSettings": "Preferències",
+    "tooltipSaveFile": "Guardar arxiu",
+    "tooltipEditTrack": "Editar",
+    "baseLayers": "Capes",
+    "tooltipoMoveIcon": "Moure node",
+    "tooltipoAddIcon": "Afegir node",
+    "tooltipoDeleteIcon": "Eliminar node",
+    "tooltipoAddWaypoint": "Afegir waypoint",
+    "tooltipoUndo": "desfer"
 }

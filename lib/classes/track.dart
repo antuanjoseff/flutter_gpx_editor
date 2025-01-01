@@ -114,9 +114,7 @@ class Track {
   }
 
   (double, int, LatLng) getCandidateNode(LatLng clickedPoint) {
-    Stopwatch stopwatch = new Stopwatch()..start();
     int numSegment = getClosestSegmentToLatLng(gpxCoords, clickedPoint);
-    print('Closest at ($numSegment) executed in ${stopwatch.elapsed}');
 
     LatLng P = projectionPoint(
         gpxCoords[numSegment], gpxCoords[numSegment + 1], clickedPoint);
@@ -124,6 +122,22 @@ class Track {
     double dist = getDistanceFromLatLonInMeters(clickedPoint, P);
 
     return (dist, numSegment, P);
+  }
+
+  int getClosestNodeFrom(LatLng location) {
+    double minD = double.infinity;
+    int closestNodeIdx = 0;
+    for (var i = 0; i < gpxCoords.length; i++) {
+      LatLng candidate = gpxCoords[i];
+      double distance = getDistanceFromLatLonInMeters(candidate, location);
+
+      if (distance < minD) {
+        minD = distance;
+        closestNodeIdx = i;
+      }
+    }
+
+    return closestNodeIdx;
   }
 
   int getClosestSegmentToLatLng(gpxCoords, point) {

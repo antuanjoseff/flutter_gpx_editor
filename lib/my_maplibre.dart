@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:gpx_editor/vars/vars.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geoxml/geoxml.dart';
@@ -18,6 +19,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
 import 'dart:async' show Future;
 import 'package:flutter/services.dart' show rootBundle;
+import 'expandedSection.dart';
+import './widgets/selectPointFromMapCenter.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -33,7 +36,8 @@ class MyMapLibre extends StatefulWidget {
   State<MyMapLibre> createState() => _MyMaplibreState(controller);
 }
 
-class _MyMaplibreState extends State<MyMapLibre> {
+class _MyMaplibreState extends State<MyMapLibre>
+    with SingleTickerProviderStateMixin {
   Track? track;
   Map<String, bool> editTools = {
     'move': false,
@@ -45,15 +49,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
   // var to know average distance between track nodes
   double nodesRatio = 0;
 
-  // var used to calculate number of pixels between track nodes
-  int imagesPadding = 0;
-
   late TextEditingController controller;
 
   ButtonStyle styleElevatedButtons = ElevatedButton.styleFrom(
     minimumSize: Size.zero, // Set this
     padding:
-        EdgeInsets.only(left: 20, right: 20, top: 5, bottom: 5), // and this
+        EdgeInsets.only(left: 20, right: 20, top: 15, bottom: 15), // and this
     backgroundColor: primaryColor,
     foregroundColor: white,
   );
@@ -64,6 +65,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
     backgroundColor: primaryColor,
     foregroundColor: white,
   );
+
+  // INFO TRACK VARIABLES
+  int startSegmentPoint = -1;
+  int endSegmentPoint = -1;
 
   double trackWidth = 3;
   Color trackColor = primaryColor; // Selects a mid-range green.
@@ -83,21 +88,31 @@ class _MyMaplibreState extends State<MyMapLibre> {
   MapLibreMapController? mapController;
 
   Line? trackLine;
+  Line? queryLine;
+  List<Wpt> queryWpts = [];
+  Track? queryTrack;
   List<Symbol> nodeSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
+  List<Symbol> manipulatedSymbols = [];
+  List<int> manipulatedIndexes =
+      []; //indexes of nodes in track coordinates that have been manipulated.
 
   List<Symbol> wptSymbols = [];
   List<Wpt> mapWayPoints = []; //Gpx WPTS
 
-  bool editMode = true;
+  bool infoMode = false;
+  bool editMode = false;
+  bool disableMapChanged = false;
 
   List<(int, Wpt, String)> edits = [];
 
   String? filename;
   String? fileName;
 
+  late Stopwatch stopwatch;
   String mapStyle = 'assets/styles/orto_style.json';
 
+  bool trackLoaded = false;
   bool ortoVisible = true;
   bool clickPaused = false;
   bool gpxLoaded = false;
@@ -108,8 +123,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
   int selectedNode = -1;
   String selectedNodeType = '';
 
-  final thr = Throttling<void>(duration: const Duration(milliseconds: 200));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 300));
+  final thr = Throttling<void>(duration: const Duration(milliseconds: 100));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 500));
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
@@ -121,6 +136,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
     controller.setBaseLayer = setBaseLayer;
     controller.getCenter = getCenter;
     controller.getZoom = getZoom;
+    controller.showDialogSaveFile = showDialogSaveFile;
     controller.getWpts = () {
       return track!.getWpts();
     };
@@ -147,6 +163,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
   void deactivateTools() {
     for (String tool in editTools.keys) {
       editTools[tool] = false;
+      removeNodeSymbols();
     }
   }
 
@@ -173,26 +190,19 @@ class _MyMaplibreState extends State<MyMapLibre> {
         editTools[ktool] = false;
       }
     }
-    if (editTools['addWayPoint'] == true) {
-      await mapController!.setSymbolIconAllowOverlap(true);
-    } else {
-      await mapController!.setSymbolIconAllowOverlap(false);
-    }
+    await mapController!.setSymbolIconAllowOverlap(true);
 
     var timer = Timer(Duration(seconds: 1), () {
       clickPaused = false;
     });
-    // timer.cancel();
   }
 
   void setEditMode(bool editmode) async {
     showTools = editmode;
-    if (editmode) {
-      // nodeSymbols = await addNodeSymbols();
-    } else {
-      print('remove map symbols');
-      nodeSymbols = await removeNodeSymbols();
+    if (!editmode) {
+      await removeNodeSymbols();
     }
+    setState(() {});
   }
 
   void _onMapCreated(MapLibreMapController contrl) async {
@@ -200,9 +210,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
     mapController!.addListener(_onMapChanged);
     mapController!.onSymbolTapped.add(_onFeatureTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
-    if (!kIsWeb) {
-      await mapController!.setSymbolIconAllowOverlap(false);
-    }
+    await mapController!.setSymbolIconAllowOverlap(true);
+    // if (!kIsWeb) {
+    //   await mapController!.setSymbolIconAllowOverlap(false);
+    // }
   }
 
   LatLng getCenter() {
@@ -214,22 +225,28 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   void _onMapChanged() async {
+    if (disableMapChanged) return;
     int zoom = mapController!.cameraPosition!.zoom.floor();
+
     if (isAnyNodesToolActive() && kIsWeb) {
       // after last map changed, wait 300ms and redraw nodes
-      deb.debounce(() {
-        redrawNodeSymbols();
+      deb.debounce(() async {
+        disableMapChanged = true;
+        await redrawNodeSymbols();
+        disableMapChanged = false;
       });
     }
-    if (zoom == 19) {
-      prevZoom = 19;
-      await mapController!.setSymbolIconAllowOverlap(true);
-    } else {
-      if (prevZoom == 19) {
-        await mapController!.setSymbolIconAllowOverlap(false);
-        prevZoom = zoom;
-      }
-    }
+
+    // await mapController!.setSymbolIconAllowOverlap(true);
+    // if (zoom == 18) {
+    //   prevZoom = 18;
+    //   await mapController!.setSymbolIconAllowOverlap(true);
+    // } else {
+    //   if (prevZoom == 18) {
+    //     await mapController!.setSymbolIconAllowOverlap(false);
+    //     prevZoom = zoom;
+    //   }
+    // }
   }
 
   bool isMoveNodeActive() {
@@ -263,9 +280,31 @@ class _MyMaplibreState extends State<MyMapLibre> {
     track!.removeNode(selectedNode);
     await mapController!.removeSymbol(nodeSymbols[symbolIdx]);
     nodeSymbols.removeAt(symbolIdx);
+    // todo increase all manipulatedindexes greatar than just deleted node
+    manipulatedIndexes =
+        updateManipulatedIndexes('delete', selectedNode, manipulatedIndexes);
     redrawNodeSymbols();
     updateTrackLine();
     setState(() {});
+  }
+
+  List<int> updateManipulatedIndexes(
+      String action, int updatedIdx, List<int> indexes) {
+    for (int i = 0; i < indexes.length; i++) {
+      int val = indexes[i];
+      if (val == updatedIdx && action == 'delete') {
+        indexes.removeAt(val);
+      } else {
+        if (updatedIdx < val && action == 'delete') {
+          indexes[i] -= 1;
+        } else {
+          if (action == 'add' && val > updatedIdx) {
+            indexes[i] += 1;
+          }
+        }
+      }
+    }
+    return indexes;
   }
 
   void _tappedOnWpt(Symbol search) async {
@@ -322,7 +361,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
             {"visibility": ortoVisible ? "visible" : "none"}));
   }
 
-  void handleClick(point, clickedPoint) {
+  void handleClick(point, clickedPoint) async {
     if (clickPaused) {
       return;
     }
@@ -337,8 +376,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
-  Future<(String?, String?)> openDialogNewWpt() async {
-    controller.text = "Waypoint ${mapWayPoints.length}";
+  Future<(String?, String?)> showDialogSaveFile(String value) async {
+    return await openDialogInputText(value);
+  }
+
+  Future<(String?, String?)> openDialogInputText(String value) async {
+    controller.text = value;
     clickPaused = true;
     return await showDialog(
         context: context,
@@ -385,6 +428,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
                         if (confirm) {
                           deleteWpt(wpt);
                         }
+                        editMode = !editMode;
+                        setEditMode(editMode);
                       },
                       child: Icon(Icons.delete,
                           size: 35, color: Theme.of(context).canvasColor),
@@ -439,6 +484,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                           onPressed: () {
                             var timer = Timer(Duration(milliseconds: 300), () {
                               Navigator.of(context).pop(true);
+                              setState(() {});
                             });
                           },
                           child: Text(AppLocalizations.of(context)!.yes)),
@@ -448,6 +494,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
                           onPressed: () {
                             var timer = Timer(Duration(milliseconds: 300), () {
                               Navigator.of(context).pop(false);
+                              setState(() {});
                             });
                           },
                           child: Text(AppLocalizations.of(context)!.no)),
@@ -496,7 +543,8 @@ class _MyMaplibreState extends State<MyMapLibre> {
         geometry: clickedPoint,
         iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
 
-    var (action, wptName) = await openDialogNewWpt();
+    var (action, wptName) =
+        await openDialogInputText("Waypoint ${mapWayPoints.length}");
 
     if (wptName != null) {
       Wpt wpt = Wpt(
@@ -537,6 +585,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
       edits.add((position + 1, newWpt, 'add'));
 
       track!.addNode(position, newWpt);
+      manipulatedIndexes.add(position);
+      manipulatedIndexes =
+          updateManipulatedIndexes('add', position, manipulatedIndexes);
 
       updateTrackLine();
       await redrawNodeSymbols();
@@ -584,14 +635,16 @@ class _MyMaplibreState extends State<MyMapLibre> {
       required origin,
       required point,
       required eventType}) async {
-    if (!isMoveNodeActive()) return;
+    // if (!isMoveNodeActive()) return;
 
     switch (eventType) {
       case DragEventType.start:
         var (symbolIdx, nodeIdx) = await searchSymbol(id);
         selectedNode = nodeIdx;
+
         if (selectedNode == -1) return;
         selectedSymbol = nodeSymbols[symbolIdx];
+
         break;
       case DragEventType.drag:
         thr.throttle(() {
@@ -599,6 +652,7 @@ class _MyMaplibreState extends State<MyMapLibre> {
               selectedNode, LatLng(current.latitude, current.longitude));
           updateTrackLine();
         });
+
         break;
       case DragEventType.end:
         edits.add((
@@ -612,10 +666,13 @@ class _MyMaplibreState extends State<MyMapLibre> {
         dragged.lat = coordinate.latitude;
         dragged.lon = coordinate.longitude;
         track!.setWptAt(selectedNode, dragged);
-
+        if (!manipulatedIndexes.contains(selectedNode)) {
+          manipulatedIndexes.add(selectedNode);
+        }
         updateTrackLine();
         await redrawNodeSymbols();
         setState(() {});
+
         break;
     }
   }
@@ -653,12 +710,12 @@ class _MyMaplibreState extends State<MyMapLibre> {
 
   Future<(int, int)> searchSymbol(String search) async {
     late LatLng geom;
+
     for (var i = 0; i < nodeSymbols.length; i++) {
       if (nodeSymbols[i].id == search) {
         geom = LatLng(nodeSymbols[i].options.geometry!.latitude,
             nodeSymbols[i].options.geometry!.longitude);
-        // debugPrint(
-        //     '-------------${nodeSymbols[i].options.geometry!.latitude} ------${nodeSymbols[i].options.geometry!.longitude}');
+
         List<LatLng> coords = track!.getCoordsList();
         late LatLng coord;
 
@@ -666,8 +723,6 @@ class _MyMaplibreState extends State<MyMapLibre> {
           coord = coords[y];
           if (coord.latitude == geom.latitude &&
               coord.longitude == geom.longitude) {
-            // debugPrint(
-            //     '  AQUEST     ${coord.latitude} xxxxxx   ${coord.longitude}');
             return (i, y);
           }
         }
@@ -694,26 +749,59 @@ class _MyMaplibreState extends State<MyMapLibre> {
     return 'node-plain';
   }
 
-  Future<List<SymbolOptions>> makeSymbolOptions() async {
-    final symbolOptions = <SymbolOptions>[];
+  bool nodeInManipulatedIndexes(int searchIdx) {
+    for (int i = 0; i < manipulatedIndexes.length; i++) {
+      if (manipulatedIndexes.contains(searchIdx)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool coordInBounds(LatLng coord, LatLngBounds viewBounds) {
+    return ((viewBounds.northeast.latitude >= coord.latitude &&
+            viewBounds.northeast.longitude >= coord.longitude) &&
+        (viewBounds.southwest.latitude <= coord.latitude &&
+            viewBounds.southwest.longitude <= coord.longitude));
+  }
+
+  Future<List<SymbolOptions>> makeSymbolOptions(List<LatLng> nodes) async {
     String image = getNodesImage(editTools);
     bool draggable = editTools['move']! ? true : false;
-    List<LatLng> nodes = track!.getCoordsList();
+// var used to calculate number of pixels between track nodes
+    int symbolsPadding = 0;
 
     if (kIsWeb) {
-      double resolution = await mapController!.getMetersPerPixelAtLatitude(
-          mapController!.cameraPosition!.target.latitude);
+      if (mapController!.cameraPosition!.zoom.floor() >= 17) {
+        symbolsPadding = 1;
+      } else {
+        double resolution = await mapController!.getMetersPerPixelAtLatitude(
+            mapController!.cameraPosition!.target.latitude);
 
-      imagesPadding = ((80 * resolution) / nodesRatio).floor();
+        symbolsPadding = ((40 * resolution) / nodesRatio).floor();
+      }
     } else {
-      imagesPadding = 1; // show all
+      symbolsPadding = 1; // show all
+    }
+    if (mapController!.cameraPosition!.zoom.floor() == 18) {
+      symbolsPadding = 1;
     }
 
+    debugPrint(
+        'symbolsPadding $symbolsPadding   ${mapController!.cameraPosition!.zoom.floor()}');
+    final symbolOptions = <SymbolOptions>[];
     for (var idx = 0; idx < nodes.length; idx++) {
-      if (idx % imagesPadding != 0) {
+      LatLng coord = nodes[idx];
+
+      if (idx % symbolsPadding != 0 && !nodeInManipulatedIndexes(idx)) {
         continue;
       }
-      LatLng coord = nodes[idx];
+
+      // LatLngBounds viewBounds = await mapController!.getVisibleRegion();
+      // if (!coordInBounds(coord, viewBounds)) {
+      //   continue;
+      // }
+
       symbolOptions.add(SymbolOptions(
           draggable: draggable,
           iconImage: image,
@@ -725,19 +813,31 @@ class _MyMaplibreState extends State<MyMapLibre> {
   }
 
   Future<List<Symbol>> addNodeSymbols() async {
-    nodeSymbols = await mapController!.addSymbols(await makeSymbolOptions());
-    return nodeSymbols;
+    List<LatLng> coords = track!.getCoordsList();
+    nodeSymbols =
+        await mapController!.addSymbols(await makeSymbolOptions(coords));
+
+    List<LatLng> manipulatedCoords = [
+      for (var idx in manipulatedIndexes) coords[idx]
+    ];
+
+    manipulatedSymbols = await mapController!
+        .addSymbols(await makeSymbolOptions(manipulatedCoords));
+
+    return [...nodeSymbols, ...manipulatedSymbols];
   }
 
-  Future<List<Symbol>> removeNodeSymbols() async {
-    await mapController!.removeSymbols(nodeSymbols);
-    nodeSymbols = [];
-    return nodeSymbols;
+  Future<void> removeNodeSymbols() async {
+    if (nodeSymbols.isNotEmpty) {
+      await mapController!.removeSymbols(nodeSymbols);
+      await mapController!.removeSymbols(manipulatedSymbols);
+      nodeSymbols = [];
+      manipulatedSymbols = [];
+    }
   }
 
   Future<void> redrawNodeSymbols() async {
-    nodeSymbols = await removeNodeSymbols();
-    // Only draw nodes if some key is activated
+    await removeNodeSymbols();
     if (isAnyNodesToolActive()) {
       nodeSymbols = await addNodeSymbols();
     }
@@ -763,12 +863,10 @@ class _MyMaplibreState extends State<MyMapLibre> {
     showTools = false;
     if (trackLine != null) {
       removeTrackLine();
-      nodeSymbols = await removeNodeSymbols();
+      await removeNodeSymbols();
       edits = [];
       track!.reset();
-      setState(() {});
     }
-
     track = Track(trackSegment);
     await track!.init();
     nodesRatio = track!.getLength() / track!.getCoordsList().length;
@@ -793,7 +891,9 @@ class _MyMaplibreState extends State<MyMapLibre> {
         lineOpacity: 0.9,
       ),
     );
-
+    setState(() {
+      trackLoaded = true;
+    });
     return trackLine;
   }
 
@@ -932,209 +1032,425 @@ class _MyMaplibreState extends State<MyMapLibre> {
     }
   }
 
+  void addQueryLine(start, end) async {
+    if (queryLine != null) {
+      mapController!.removeLine(queryLine!);
+    }
+
+    if (end < start) {
+      int tmp = start;
+      start = end;
+      end = tmp;
+    }
+    if (end < track!.getCoordsList().length) {
+      end += 1;
+    }
+
+    List<LatLng> queryCoords = track!.getCoordsList().sublist(start, end);
+    queryWpts = track!.getTrack().sublist(start, end);
+
+    queryTrack = Track(queryWpts);
+    await queryTrack!.init();
+    debugPrint('${queryTrack!.getLength()}');
+
+    queryLine = await mapController!.addLine(
+      LineOptions(
+        geometry: queryCoords,
+        lineColor:
+            invert(UserSimplePreferences.getTrackColor()!).toHexStringRGB(),
+        lineWidth: UserSimplePreferences.getTrackWidth(),
+        lineOpacity: 0.9,
+      ),
+    );
+    setState(() {});
+  }
+
+  void resetInfoMode() {
+    if (queryLine != null) {
+      mapController!.removeLine(queryLine!);
+      queryLine = null;
+    }
+    startSegmentPoint = -1;
+    endSegmentPoint = -1;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      MapLibreMap(
-          minMaxZoomPreference: MinMaxZoomPreference(0, 18),
-          compassEnabled: false,
-          trackCameraPosition: true,
-          onMapCreated: _onMapCreated,
-          onMapClick: handleClick,
-          onStyleLoadedCallback: () {
-            addImageFromAsset(
-                mapController!, "node-plain", "assets/symbols/node-plain.png");
-            addImageFromAsset(
-                mapController!, "node-drag", "assets/symbols/node-drag.png");
-            addImageFromAsset(mapController!, "node-delete",
-                "assets/symbols/node-delete.png");
-            if (kIsWeb) {
-              addImageFromAsset(
-                  mapController!, "waypoint", "assets/symbols/waypoint.png");
-            } else {
-              addImageFromAsset(mapController!, "waypoint",
-                  "assets/symbols/waypoint-mobile.png");
-            }
-          },
-          initialCameraPosition: const CameraPosition(
-            target: LatLng(42.0, 3.0),
-            zoom: 0,
+    return LayoutBuilder(builder: (context, constraints) {
+      return Stack(children: [
+        MapLibreMap(
+            minMaxZoomPreference: MinMaxZoomPreference(0, 18),
+            compassEnabled: false,
+            trackCameraPosition: true,
+            onMapCreated: _onMapCreated,
+            onMapClick: handleClick,
+            onStyleLoadedCallback: () {
+              if (kIsWeb) {
+                addImageFromAsset(mapController!, "node-plain",
+                    "assets/symbols/node-plain-web.png");
+                addImageFromAsset(mapController!, "node-drag",
+                    "assets/symbols/node-drag-web.png");
+                addImageFromAsset(mapController!, "node-delete",
+                    "assets/symbols/node-delete-web.png");
+                addImageFromAsset(
+                    mapController!, "waypoint", "assets/symbols/waypoint.png");
+              } else {
+                addImageFromAsset(mapController!, "node-plain",
+                    "assets/symbols/node-plain.png");
+                addImageFromAsset(mapController!, "node-drag",
+                    "assets/symbols/node-drag.png");
+                addImageFromAsset(mapController!, "node-delete",
+                    "assets/symbols/node-delete.png");
+                addImageFromAsset(mapController!, "waypoint",
+                    "assets/symbols/waypoint-mobile.png");
+              }
+            },
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(42.0, 3.0),
+              zoom: 0,
+            ),
+            styleString: 'assets/styles/mainmap_style.json'
+            // styleString: mapStyle
+            ),
+        // Container(
+
+        //     child: CustomPaint(
+        //         painter: myPaint(),
+        //         size: Size(constraints.maxWidth, constraints.maxHeight))),
+
+        if (infoMode) ...[
+          SelectPointFromMapCenter(
+            constraints: constraints,
           ),
-          styleString: 'assets/styles/mainmap_style.json'
-          // styleString: mapStyle
-          ),
-      Positioned(
-        left: 10,
-        top: 10,
-        child: GestureDetector(
-          onTap: () {
-            clickPaused = true;
-            var timer = Timer(Duration(seconds: 1), () {
-              clickPaused = false;
-            });
-            Scaffold.of(context).openDrawer();
-          },
-          child: CircleAvatar(
-            radius: 25,
-            backgroundColor: primaryColor,
-            child: Icon(Icons.layers_rounded, color: Colors.white),
-          ),
-        ),
-      ),
-      ...[
-        showTools
-            ? Positioned(
-                right: 10,
-                top: 10,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            toggleTool('move');
+          Positioned(
+              top: 30,
+              right: 30,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      Tooltip(
+                        message: 'Select the start point of the segment',
+                        child: ElevatedButton(
+                            onPressed: () async {
+                              startSegmentPoint = await track!
+                                  .getClosestNodeFrom(
+                                      mapController!.cameraPosition!.target);
 
-                            colorIcon1 = defaultColorIcon1;
-                            colorIcon2 = defaultColorIcon2;
+                              mapController!.animateCamera(
+                                CameraUpdate.newLatLng(
+                                    track!.getCoordsList()[startSegmentPoint]),
+                                duration: const Duration(milliseconds: 100),
+                              );
+                              if (endSegmentPoint != -1) {
+                                addQueryLine(
+                                    startSegmentPoint, endSegmentPoint);
+                              }
+                            },
+                            style: styleElevatedButtons,
+                            child: Text('Start point')),
+                      ),
+                      const SizedBox(
+                        width: 20,
+                      ),
+                      Tooltip(
+                        message: 'Select the end point of the segment',
+                        child: ElevatedButton(
+                            onPressed: () async {
+                              endSegmentPoint = await track!.getClosestNodeFrom(
+                                  mapController!.cameraPosition!.target);
 
-                            if (editTools['move']!) {
-                              colorIcon1 = activeColor1;
-                              colorIcon2 = activeColor2;
-                            }
-                            redrawNodeSymbols();
-
-                            setState(() {});
-                          },
-                          child: CircleAvatar(
-                            radius: 25,
-                            backgroundColor:
-                                editTools['move']! ? backgroundActive : white,
-                            child: MoveIcon(
-                              color1:
-                                  editTools['move']! ? white : inactiveColor,
-                              color2: const Color(0xffc5dd16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          width: 4,
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            toggleTool('add');
-
-                            colorIcon1 = defaultColorIcon1;
-                            colorIcon2 = defaultColorIcon2;
-
-                            if (editTools['add']!) {
-                              colorIcon1 = activeColor1;
-                              colorIcon2 = activeColor2;
-                            }
-
-                            redrawNodeSymbols();
-                            setState(() {});
-                          },
-                          child: CircleAvatar(
-                            radius: 25,
-                            backgroundColor:
-                                editTools['add']! ? backgroundActive : white,
-                            child: AddIcon(
-                              color1: editTools['add']! ? white : inactiveColor,
-                              color2: const Color(0xffc5dd16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          width: 4,
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            toggleTool('delete');
-                            await redrawNodeSymbols();
-                            setState(() {});
-                          },
-                          child: CircleAvatar(
-                            radius: 25,
-                            backgroundColor: editTools['delete']!
-                                ? backgroundActive
-                                : Colors.white,
-                            child: DeleteIcon(
-                              color1:
-                                  editTools['delete']! ? white : inactiveColor,
-                              color2: const Color(0xffc5dd16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          width: 4,
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            await removeNodeSymbols();
-                            toggleTool('addWayPoint');
-                            setState(() {});
-                          },
-                          child: CircleAvatar(
-                              radius: 25,
-                              backgroundColor: Colors.white,
-                              child: SvgIcon(
-                                  color: editTools['addWayPoint']!
-                                      ? Theme.of(context).canvasColor
-                                      : inactiveColor,
-                                  responsiveColor: false,
-                                  size: 30,
-                                  icon: SvgIconData(
-                                      'assets/symbols/waypoint.svg'))
-
-                              // Icon(
-                              //   Icons.flag,
-                              //   color: editTools['addWayPoint']!
-                              //       ? Theme.of(context).canvasColor
-                              //       : inactiveColor,
-                              //   size: 35,
-                              // ),
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    ...[
-                      edits.isNotEmpty
-                          ? Positioned(
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (edits.isNotEmpty) {
-                                    clickPaused = true;
-                                    var timer = Timer(Duration(seconds: 1), () {
-                                      clickPaused = false;
-                                    });
-
-                                    undo();
-                                  } else {}
-                                },
-                                child: CircleAvatar(
-                                  radius: 25,
-                                  backgroundColor:
-                                      edits.isNotEmpty ? primaryColor : white,
-                                  child: UndoIcon(
-                                      color: edits.isEmpty
-                                          ? inactiveColor
-                                          : white),
-                                ),
-                              ),
-                            )
-                          : Container()
+                              mapController!.animateCamera(
+                                CameraUpdate.newLatLng(
+                                    track!.getCoordsList()[endSegmentPoint]),
+                                duration: const Duration(milliseconds: 100),
+                              );
+                              if (startSegmentPoint != -1) {
+                                addQueryLine(
+                                    startSegmentPoint, endSegmentPoint);
+                              }
+                            },
+                            style: styleElevatedButtons,
+                            child: Text('End point')),
+                      ),
                     ],
-                  ],
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Tooltip(
+                    message: 'this is a tooltip',
+                    child: ElevatedButton(
+                      onPressed:
+                          (startSegmentPoint != -1 && endSegmentPoint != -1)
+                              ? () {}
+                              : null,
+                      style: styleElevatedButtons,
+                      child: Icon(Icons.add_chart_sharp),
+                    ),
+                  )
+                ],
+              ))
+        ],
+
+        Positioned(
+          left: 10,
+          top: 10,
+          child: Column(children: [
+            CircleAvatar(
+              radius: 27,
+              backgroundColor: primaryColor,
+              child: CircleAvatar(
+                radius: 25,
+                backgroundColor: Scaffold.of(context).isEndDrawerOpen
+                    ? primaryColor
+                    : Colors.white,
+                child: IconButton(
+                  tooltip: AppLocalizations.of(context)!.baseLayers,
+                  icon: Icon(Icons.layers_rounded),
+                  color: Scaffold.of(context).isEndDrawerOpen
+                      ? Colors.white
+                      : primaryColor,
+                  onPressed: () {
+                    clickPaused = true;
+                    var timer = Timer(Duration(seconds: 1), () {
+                      clickPaused = false;
+                    });
+                    setState(() {
+                      Scaffold.of(context).openEndDrawer();
+                    });
+                  },
                 ),
-              )
-            : Container(),
-      ],
-    ]);
+              ),
+            ),
+            const SizedBox(
+              height: 4,
+            ),
+            ...[
+              trackLoaded
+                  ? GestureDetector(
+                      onTap: () {
+                        if (editMode) return;
+                        setState(() {
+                          infoMode = !infoMode;
+                          resetInfoMode();
+                        });
+                      },
+                      child: CircleAvatar(
+                        radius: 27,
+                        backgroundColor: !editMode ? primaryColor : thirthcolor,
+                        child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor: !editMode
+                                ? (infoMode ? primaryColor : white)
+                                : thirthcolor,
+                            child: Text('i',
+                                style: TextStyle(
+                                    fontSize: 30,
+                                    color: editMode
+                                        ? white
+                                        : infoMode
+                                            ? white
+                                            : primaryColor))),
+                      ),
+                    )
+                  : Container()
+            ],
+            ...[
+              trackLoaded
+                  ? CircleAvatar(
+                      radius: 27,
+                      backgroundColor: infoMode
+                          ? thirthcolor
+                          : editMode
+                              ? thirthcolor
+                              : primaryColor,
+                      child: CircleAvatar(
+                        radius: 25,
+                        // backgroundColor: !editMode ? Colors.white : thirthcolor,
+                        backgroundColor: infoMode
+                            ? thirthcolor
+                            : (editMode ? thirthcolor : white),
+                        child: IconButton(
+                          icon: Icon(Icons.edit,
+                              color: (infoMode || editMode)
+                                  ? white
+                                  : primaryColor),
+                          tooltip:
+                              AppLocalizations.of(context)!.tooltipEditTrack,
+                          onPressed: () async {
+                            if (infoMode) return;
+                            editMode = !editMode;
+                            infoMode = false;
+                            if (!editMode) {
+                              deactivateTools();
+                            }
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    )
+                  : Container()
+            ],
+            AnimatedSize(
+              duration: Duration(milliseconds: 600),
+              child: Column(children: [
+                const SizedBox(
+                  height: 4,
+                ),
+                CircleAvatar(
+                  radius: editMode ? 27 : 0,
+                  backgroundColor: primaryColor,
+                  child: CircleAvatar(
+                    radius: editMode ? 25 : 0,
+                    backgroundColor:
+                        editTools['move']! ? backgroundActive : white,
+                    child: IconButton(
+                      tooltip: AppLocalizations.of(context)!.tooltipoMoveIcon,
+                      icon: MoveIcon(
+                        color: editTools['move']! ? white : primaryColor,
+                        size: editMode ? 35 : 0,
+                      ),
+                      onPressed: () async {
+                        toggleTool('move');
+
+                        colorIcon1 = defaultColorIcon1;
+                        colorIcon2 = defaultColorIcon2;
+
+                        if (editTools['move']!) {
+                          colorIcon1 = activeColor1;
+                          colorIcon2 = activeColor2;
+                        }
+                        redrawNodeSymbols();
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  height: 4,
+                ),
+                CircleAvatar(
+                  radius: editMode ? 27 : 0,
+                  backgroundColor: primaryColor,
+                  child: CircleAvatar(
+                    radius: editMode ? 25 : 0,
+                    backgroundColor:
+                        editTools['add']! ? backgroundActive : white,
+                    child: IconButton(
+                      tooltip: AppLocalizations.of(context)!.tooltipoAddIcon,
+                      icon: AddIcon(
+                        color: editTools['add']! ? white : primaryColor,
+                        size: editMode ? 35 : 0,
+                      ),
+                      onPressed: () async {
+                        toggleTool('add');
+
+                        colorIcon1 = defaultColorIcon1;
+                        colorIcon2 = defaultColorIcon2;
+
+                        if (editTools['add']!) {
+                          colorIcon1 = activeColor1;
+                          colorIcon2 = activeColor2;
+                        }
+
+                        redrawNodeSymbols();
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  height: 4,
+                ),
+                CircleAvatar(
+                  radius: editMode ? 27 : 0,
+                  backgroundColor: primaryColor,
+                  child: CircleAvatar(
+                    radius: editMode ? 25 : 0,
+                    backgroundColor:
+                        editTools['delete']! ? backgroundActive : Colors.white,
+                    child: IconButton(
+                      tooltip: AppLocalizations.of(context)!.tooltipoDeleteIcon,
+                      icon: DeleteIcon(
+                        color: editTools['delete']! ? white : primaryColor,
+                        size: editMode ? 35 : 0,
+                      ),
+                      onPressed: () async {
+                        toggleTool('delete');
+                        await redrawNodeSymbols();
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  height: 4,
+                ),
+                CircleAvatar(
+                  radius: editMode ? 27 : 0,
+                  backgroundColor: primaryColor,
+                  child: CircleAvatar(
+                      radius: editMode ? 25 : 0,
+                      backgroundColor: editTools['addWayPoint']!
+                          ? backgroundActive
+                          : Colors.white,
+                      child: IconButton(
+                        tooltip:
+                            AppLocalizations.of(context)!.tooltipoAddWaypoint,
+                        icon: AnimatedScale(
+                          scale: editMode ? 1 : 0,
+                          duration: Duration(milliseconds: 300),
+                          child: SvgIcon(
+                              color: editTools['addWayPoint']!
+                                  ? white
+                                  : primaryColor,
+                              responsiveColor: false,
+                              size: 30,
+                              icon: SvgIconData('assets/symbols/waypoint.svg')),
+                        ),
+                        onPressed: () async {
+                          await removeNodeSymbols();
+                          toggleTool('addWayPoint');
+                          setState(() {});
+                        },
+                      )),
+                ),
+                const SizedBox(
+                  height: 20,
+                ),
+                CircleAvatar(
+                  radius: editMode ? 27 : 0,
+                  backgroundColor: edits.isEmpty ? thirthcolor : primaryColor,
+                  child: CircleAvatar(
+                    radius: editMode ? 25 : 0,
+                    backgroundColor: edits.isEmpty ? thirthcolor : white,
+                    child: IconButton(
+                      tooltip: AppLocalizations.of(context)!.tooltipoUndo,
+                      icon: UndoIcon(
+                        color: edits.isEmpty ? white : primaryColor,
+                        size: editMode ? 35 : 0,
+                      ),
+                      onPressed: () {
+                        if (edits.isNotEmpty) {
+                          clickPaused = true;
+                          var timer = Timer(Duration(seconds: 1), () {
+                            clickPaused = false;
+                          });
+
+                          undo();
+                        } else {}
+                      },
+                    ),
+                  ),
+                )
+              ]),
+            )
+          ]),
+        ),
+      ]);
+    });
   }
 }
 

@@ -22,5 +22,16 @@
     "addNodeUndone": "Deshacer añadir nodo",
     "addWaypointUndone": "Deshacer añadir waypoint",
     "editWaypointUndone": "Deshacer edición waypoint",
-    "deleteWaypointUndone": "Deshacer eliminar waypoint"    
+    "deleteWaypointUndone": "Deshacer eliminar waypoint",
+    "leftDrawerTitle": "CAPA BASE",
+    "tooltipOpenFile": "Abrir archivo",
+    "tooltipTrackSettings": "Preferencias",
+    "tooltipSaveFile": "Guardar archivo",
+    "tooltipEditTrack": "Editar",
+    "baseLayers": "Capas",
+    "tooltipoMoveIcon": "Mover nodo",
+    "tooltipoAddIcon": "Añadir nodo",
+    "tooltipoDeleteIcon": "Eliminar nodo",
+    "tooltipoAddWaypoint": "Añadir waypoint",
+    "tooltipoUndo": "deshacer"
 }
