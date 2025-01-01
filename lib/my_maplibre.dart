@@ -21,6 +21,7 @@ import 'dart:async' show Future;
 import 'package:flutter/services.dart' show rootBundle;
 import 'expandedSection.dart';
 import './widgets/selectPointFromMapCenter.dart';
+import './pages/TrackInfo.dart';
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -1056,9 +1057,9 @@ class _MyMaplibreState extends State<MyMapLibre>
     queryLine = await mapController!.addLine(
       LineOptions(
         geometry: queryCoords,
-        lineColor:
-            invert(UserSimplePreferences.getTrackColor()!).toHexStringRGB(),
-        lineWidth: UserSimplePreferences.getTrackWidth(),
+        lineColor: invert(UserSimplePreferences.getTrackColor() ?? primaryColor)
+            .toHexStringRGB(),
+        lineWidth: UserSimplePreferences.getTrackWidth() ?? 4,
         lineOpacity: 0.9,
       ),
     );
@@ -1182,10 +1183,16 @@ class _MyMaplibreState extends State<MyMapLibre>
                   Tooltip(
                     message: 'this is a tooltip',
                     child: ElevatedButton(
-                      onPressed:
-                          (startSegmentPoint != -1 && endSegmentPoint != -1)
-                              ? () {}
-                              : null,
+                      onPressed: (queryTrack != null)
+                          ? () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        TrackInfo(track: queryTrack),
+                                  ));
+                            }
+                          : null,
                       style: styleElevatedButtons,
                       child: Icon(Icons.add_chart_sharp),
                     ),

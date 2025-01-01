@@ -7,6 +7,12 @@ import '../util.dart';
 class Track {
   // Original track
   List<Wpt> trackSegment = [];
+
+  // Accumulated distance of each track point. Used in chart
+  List<int> xChartLabels = [];
+  List<int> elevations = [];
+  double minElevation = double.infinity;
+  double maxElevation = 0;
   List<Wpt> wpts = [];
 
   // Array of coordinates to draw a linestring on map
@@ -24,6 +30,7 @@ class Track {
   Future<void> init() async {
     LatLng cur;
     double inc = 0;
+
     // Init track bounds with first track point
     bounds = my.Bounds(LatLng(trackSegment.first.lat!, trackSegment.first.lon!),
         LatLng(trackSegment.first.lat!, trackSegment.first.lon!));
@@ -39,11 +46,44 @@ class Track {
       bounds!.expand(cur);
       gpxCoords.add(cur);
       length += inc;
+      xChartLabels.add(length.floor());
+      trackSegment[i].ele ??= 0;
+      double e = trackSegment[i].ele!;
+      elevations.add(e.floor());
+      minElevation = (e < minElevation) ? e : minElevation;
+      maxElevation = (e > maxElevation) ? e : maxElevation;
     }
   }
 
   double getLength() {
     return length;
+  }
+
+  int getMinElevation() {
+    return minElevation.floor();
+  }
+
+  int getMaxElevation() {
+    return maxElevation.floor();
+  }
+
+  List<int> getElevations() {
+    return elevations;
+  }
+
+  List<int> getXChartLabels() {
+    return xChartLabels;
+  }
+
+  Duration getDuration() {
+    DateTime? start = trackSegment[0].time;
+    DateTime? end = trackSegment[trackSegment.length - 1].time;
+
+    if (start != null && end != null) {
+      return end.difference(start);
+    } else {
+      return Duration(seconds: 0);
+    }
   }
 
   List<LatLng> getCoordsList() {
