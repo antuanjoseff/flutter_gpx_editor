@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  dotted_line: ^3.2.3
   file_saver: ^0.2.14
   flutter_svg_icons: ^0.0.1
   shared_preferences: ^2.3.2

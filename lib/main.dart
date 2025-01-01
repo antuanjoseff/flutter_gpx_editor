@@ -282,7 +282,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             await UserSimplePreferences.setTrackWidth(trWidth);
                             await UserSimplePreferences.setTrackColor(
                                 trackColor!);
-
+                            debugPrint('TRACK COLOR $trackColor');
                             LineOptions changes = LineOptions(
                                 lineColor: trackColor!.toHexStringRGB(),
                                 lineWidth: trackWidth);
@@ -415,7 +415,12 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
-        body: MyMapLibre(scaffoldKey: _scaffoldKey, controller: _controller),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return MyMapLibre(
+                scaffoldKey: _scaffoldKey, controller: _controller);
+          },
+        ),
       ),
     );
   }
