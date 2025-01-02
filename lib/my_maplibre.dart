@@ -1033,10 +1033,14 @@ class _MyMaplibreState extends State<MyMapLibre>
     }
   }
 
-  void addQueryLine(start, end) async {
+  void removeQueryLine() {
     if (queryLine != null) {
       mapController!.removeLine(queryLine!);
     }
+  }
+
+  void addQueryLine(start, end) async {
+    removeQueryLine();
 
     if (end < start) {
       int tmp = start;
@@ -1120,8 +1124,32 @@ class _MyMaplibreState extends State<MyMapLibre>
         //         size: Size(constraints.maxWidth, constraints.maxHeight))),
 
         if (infoMode) ...[
-          SelectPointFromMapCenter(
-            constraints: constraints,
+          GestureDetector(
+            onTap: () async {
+              int idx = await track!
+                  .getClosestNodeFrom(mapController!.cameraPosition!.target);
+              if (startSegmentPoint == -1) {
+                startSegmentPoint = idx;
+              } else {
+                if (endSegmentPoint == -1) {
+                  endSegmentPoint = idx;
+                } else {
+                  removeQueryLine();
+                  startSegmentPoint = idx;
+                  endSegmentPoint = -1;
+                }
+              }
+              mapController!.animateCamera(
+                CameraUpdate.newLatLng(track!.getCoordsList()[idx]),
+                duration: const Duration(milliseconds: 100),
+              );
+              if (startSegmentPoint != -1 && endSegmentPoint != -1) {
+                addQueryLine(startSegmentPoint, endSegmentPoint);
+              }
+            },
+            child: SelectPointFromMapCenter(
+              constraints: constraints,
+            ),
           ),
           Positioned(
               top: 30,

@@ -18,7 +18,7 @@ class SelectPointFromMapCenter extends StatelessWidget {
               radius: 35,
               backgroundColor: primaryColor.withOpacity(0.6),
               child: Icon(
-                Icons.add,
+                Icons.gps_fixed,
                 size: 40,
                 color: white,
               )),

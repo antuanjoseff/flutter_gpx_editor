@@ -15,6 +15,13 @@ class TrackInfo extends StatefulWidget {
 }
 
 class _TrackInfoState extends State<TrackInfo> {
+  List<Color> gradientColors = [
+    Colors.red.withOpacity(0),
+    Colors.red.withOpacity(0.8),
+    Colors.red.withOpacity(0.5),
+    Colors.red.withOpacity(0.1),
+  ];
+
   String formatDistance(double length) {
     int kms = (length / 1000).floor().toInt();
     int mts = (length - (kms * 1000)).toInt();
@@ -59,7 +66,21 @@ class _TrackInfoState extends State<TrackInfo> {
     if (value == meta.max) {
       return const Text('');
     } else {
-      return Text('${(value / 1000).toStringAsFixed(1)}km');
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Text('${(value / 1000).toStringAsFixed(1)}km'),
+      );
+    }
+  }
+
+  Widget formatYLabel(value, meta) {
+    if (value == meta.min || value == meta.max) {
+      return const Text('');
+    } else {
+      return Padding(
+        padding: const EdgeInsets.only(left: 8.0),
+        child: Text('${value.toStringAsFixed(0)}m'),
+      );
     }
   }
 
@@ -69,45 +90,87 @@ class _TrackInfoState extends State<TrackInfo> {
       appBar: AppBar(
         title: Text('Track stats'),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 800,
-            height: 400,
-            child: LineChart(LineChartData(
-                minX: 0,
-                maxX: widget.track!.getLength(),
-                minY: widget.track.getMinElevation(),
-                maxY: widget.track.getMaxElevation(),
-                titlesData: FlTitlesData(
-                  leftTitles:
-                      AxisTitles(sideTitles: SideTitles(showTitles: true)),
-                  rightTitles:
-                      AxisTitles(sideTitles: SideTitles(showTitles: true)),
-                  bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 50,
-                    getTitlesWidget: (value, meta) => formatLabel(value, meta),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 800,
+              height: 400,
+              child: LineChart(LineChartData(
+                  minX: 0,
+                  maxX: widget.track!.getLength(),
+                  minY: widget.track.getMinElevation(),
+                  maxY: widget.track.getMaxElevation(),
+                  gridData: FlGridData(show: false),
+                  lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (LineBarSpot touchedSpot) => Colors.green,
+                    getTooltipItems: (List<LineBarSpot> lineBarsSpot) {
+                      return lineBarsSpot.map((lineBarSpot) {
+                        return LineTooltipItem(
+                          lineBarSpot.y.toString(),
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      }).toList();
+                    },
                   )),
-                  topTitles:
-                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: getSpots(),
-                    color: primaryColor,
-                    barWidth: 2,
-                    isCurved: true,
+                  titlesData: FlTitlesData(
+                    leftTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: AxisTitles(
+                      axisNameSize: 80,
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 50,
+                        getTitlesWidget: (value, meta) =>
+                            formatYLabel(value, meta),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 42,
+                        interval: 5000,
+                        getTitlesWidget: (value, meta) =>
+                            formatLabel(value, meta),
+                      ),
+                    ),
+                    topTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
-                ])),
-          ),
-          Text('Track length'),
-          Text(formatDistance(widget.track!.getLength())),
-          Text('Track Duration'),
-          Text(_formatDuration(widget.track!.getDuration()))
-        ],
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: getSpots(),
+                      color: primaryColor,
+                      barWidth: 2,
+                      isCurved: false,
+                      dotData: const FlDotData(
+                        show: false,
+                      ),
+                      shadow: const Shadow(
+                        color: Colors.yellow,
+                        blurRadius: 2,
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                        ),
+                      ),
+                    ),
+                  ])),
+            ),
+            Text('Track length'),
+            Text(formatDistance(widget.track!.getLength())),
+            Text('Track Duration'),
+            Text(_formatDuration(widget.track!.getDuration()))
+          ],
+        ),
       ),
     );
   }
