@@ -86,6 +86,14 @@ class Track {
     }
   }
 
+  void showNode(int idx) {
+    print(gpxCoords[idx]);
+  }
+
+  LatLng getNode(int idx) {
+    return gpxCoords[idx];
+  }
+
   List<LatLng> getCoordsList() {
     return gpxCoords;
   }
@@ -122,7 +130,6 @@ class Track {
   }
 
   void updateWpt(int idx, Wpt wpt) {
-    debugPrint('            $idx        ${wpt.name}');
     wpts.removeAt(idx);
     wpts.insert(idx, wpt);
   }

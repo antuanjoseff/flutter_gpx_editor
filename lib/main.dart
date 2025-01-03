@@ -84,7 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Wpt> theGpx = [];
 
   Color? trackColor;
-  double trackWidth = 3;
+  double trackWidth = 4;
 
   final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
@@ -94,7 +94,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    trackWidth = UserSimplePreferences.getTrackWidth() ?? 3;
+    trackWidth = UserSimplePreferences.getTrackWidth() ?? trackWidth;
   }
 
   @override
@@ -282,12 +282,13 @@ class _MyHomePageState extends State<MyHomePage> {
                             await UserSimplePreferences.setTrackWidth(trWidth);
                             await UserSimplePreferences.setTrackColor(
                                 trackColor!);
-                            debugPrint('TRACK COLOR $trackColor');
+
                             LineOptions changes = LineOptions(
                                 lineColor: trackColor!.toHexStringRGB(),
                                 lineWidth: trackWidth);
 
-                            _controller.updateTrack!(changes);
+                            _controller.updateTrack!(
+                                trackColor!, trackWidth, changes);
                           }
 
                           setState(() {});

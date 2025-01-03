@@ -49,8 +49,9 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   // var to know average distance between track nodes
   double nodesRatio = 0;
+  bool showBottomPanel = false;
 
-  late TextEditingController controller;
+  late TextEditingController textcontroller;
 
   ButtonStyle styleElevatedButtons = ElevatedButton.styleFrom(
     minimumSize: Size.zero, // Set this
@@ -71,7 +72,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   int startSegmentPoint = -1;
   int endSegmentPoint = -1;
 
-  double trackWidth = 3;
+  double trackWidth = 4;
   Color trackColor = primaryColor; // Selects a mid-range green.
   Color defaultColorIcon1 = inactiveColor; // Selects a mid-range green.
   Color defaultColorIcon2 = inactiveColor; // Selects a mid-range green.
@@ -90,6 +91,9 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   Line? trackLine;
   Line? queryLine;
+  Symbol? startpoint;
+  Symbol? endpoint;
+  Symbol? shownode;
   List<Wpt> queryWpts = [];
   Track? queryTrack;
   List<Symbol> nodeSymbols =
@@ -137,6 +141,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     controller.setBaseLayer = setBaseLayer;
     controller.getCenter = getCenter;
     controller.getZoom = getZoom;
+    controller.showNode = showNode;
     controller.showDialogSaveFile = showDialogSaveFile;
     controller.getWpts = () {
       return track!.getWpts();
@@ -157,7 +162,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       backgroundActive = Theme.of(context).canvasColor;
     });
-    controller = TextEditingController();
+    textcontroller = TextEditingController();
     super.initState();
   }
 
@@ -223,6 +228,21 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   double getZoom() {
     return mapController!.cameraPosition!.zoom;
+  }
+
+  void showNode(location) async {
+    if (shownode == null) {
+      shownode = await mapController!.addSymbol(SymbolOptions(
+          draggable: false,
+          iconImage: 'waypoint',
+          geometry: location,
+          iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
+    } else {
+      _updateSelectedSymbol(
+          shownode!,
+          SymbolOptions(
+              geometry: location, iconImage: 'waypoint', draggable: false));
+    }
   }
 
   void _onMapChanged() async {
@@ -382,7 +402,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<(String?, String?)> openDialogInputText(String value) async {
-    controller.text = value;
+    textcontroller.text = value;
     clickPaused = true;
     return await showDialog(
         context: context,
@@ -390,12 +410,12 @@ class _MyMaplibreState extends State<MyMapLibre>
         builder: (context) => AlertDialog(
                 title: Text(AppLocalizations.of(context)!.wptName),
                 content: TextField(
-                  onTap: () => controller.selection = TextSelection(
+                  onTap: () => textcontroller.selection = TextSelection(
                       baseOffset: 0,
-                      extentOffset: controller.value.text.length),
+                      extentOffset: textcontroller.value.text.length),
                   autofocus: true,
                   // decoration: InputDecoration(hintText: 'Nom del track'),
-                  controller: controller,
+                  controller: textcontroller,
                   onSubmitted: (_) => submit('add'),
                 ),
                 actions: [
@@ -413,7 +433,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<(String?, String?)> openDialogEditWpt(Wpt wpt) async {
-    controller.text = "${wpt.name}";
+    textcontroller.text = "${wpt.name}";
     clickPaused = true;
     return await showDialog(
         context: context,
@@ -438,12 +458,12 @@ class _MyMaplibreState extends State<MyMapLibre>
                   ],
                 ),
                 content: TextField(
-                  onTap: () => controller.selection = TextSelection(
+                  onTap: () => textcontroller.selection = TextSelection(
                       baseOffset: 0,
-                      extentOffset: controller.value.text.length),
+                      extentOffset: textcontroller.value.text.length),
                   autofocus: true,
                   // decoration: InputDecoration(hintText: 'Nom del track'),
-                  controller: controller,
+                  controller: textcontroller,
                   onSubmitted: (_) => submit('edit'),
                 ),
                 actions: [
@@ -511,7 +531,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         'delete',
         wpt.extensions['id'],
       ));
-      controller.clear();
+      textcontroller.clear();
     });
   }
 
@@ -520,9 +540,9 @@ class _MyMaplibreState extends State<MyMapLibre>
       clickPaused = false;
       Navigator.of(context).pop((
         action,
-        controller.text,
+        textcontroller.text,
       ));
-      controller.clear();
+      textcontroller.clear();
     });
   }
 
@@ -533,7 +553,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         'cancel',
         null,
       ));
-      controller.clear();
+      textcontroller.clear();
     });
   }
 
@@ -678,6 +698,54 @@ class _MyMaplibreState extends State<MyMapLibre>
     }
   }
 
+  void _onSegmentMarkerDrag(id,
+      {required current,
+      required delta,
+      required origin,
+      required point,
+      required eventType}) async {
+    // if (!isMoveNodeActive()) return;
+
+    switch (eventType) {
+      case DragEventType.end:
+        newSegmentPoint(id, current);
+        break;
+    }
+  }
+
+  void newSegmentPoint(String id, LatLng location) async {
+    int idx = await track!.getClosestNodeFrom(location);
+
+    if (startpoint!.id == id) {
+      startSegmentPoint = idx;
+      _updateSelectedSymbol(
+        startpoint!,
+        SymbolOptions(
+            geometry: track!.getNode(idx),
+            iconImage: 'startpoint-marker',
+            draggable: true),
+      );
+    } else {
+      endSegmentPoint = idx;
+      _updateSelectedSymbol(
+        endpoint!,
+        SymbolOptions(
+            geometry: track!.getNode(idx),
+            iconImage: 'endpoint-marker',
+            draggable: true),
+      );
+    }
+
+    if (startSegmentPoint != -1 && endSegmentPoint != -1) {
+      if (startSegmentPoint > endSegmentPoint) {
+        int tmp = startSegmentPoint;
+        startSegmentPoint = endSegmentPoint;
+        endSegmentPoint = tmp;
+      }
+      addQueryLine(startSegmentPoint, endSegmentPoint);
+    }
+  }
+
   Future<String> activateSymbol(Symbol symbol, int idx) async {
     await redrawSymbol(symbol, idx, 'activate');
     return symbol.id;
@@ -788,8 +856,6 @@ class _MyMaplibreState extends State<MyMapLibre>
       symbolsPadding = 1;
     }
 
-    debugPrint(
-        'symbolsPadding $symbolsPadding   ${mapController!.cameraPosition!.zoom.floor()}');
     final symbolOptions = <SymbolOptions>[];
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
@@ -846,7 +912,7 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   @override
   void dispose() {
-    controller.dispose();
+    textcontroller.dispose();
     if (mapController!.onFeatureDrag.isNotEmpty) {
       mapController!.onFeatureDrag.remove(_onNodeDrag);
     }
@@ -855,7 +921,9 @@ class _MyMaplibreState extends State<MyMapLibre>
     super.dispose();
   }
 
-  Future<void> updateTrack(changes) async {
+  Future<void> updateTrack(color, width, changes) async {
+    trackColor = color;
+    trackWidth = width;
     await mapController!.updateLine(trackLine!, changes);
   }
 
@@ -899,9 +967,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<void> removeTrackLine() async {
-    print('*' * 60);
     if (trackLine != null) {
-      print('remove TRACKLINE');
       mapController!.removeLine(trackLine!);
       if (editMode) {
         editMode = false;
@@ -1037,6 +1103,41 @@ class _MyMaplibreState extends State<MyMapLibre>
     if (queryLine != null) {
       mapController!.removeLine(queryLine!);
     }
+    if (startpoint != null) {
+      mapController!.removeSymbol(startpoint!);
+    }
+
+    if (endpoint != null) {
+      mapController!.removeSymbol(endpoint!);
+    }
+  }
+
+  enableNodeDragging() {
+    mapController!.onFeatureDrag.add(_onNodeDrag);
+  }
+
+  disableNodeDragging() {
+    mapController!.onFeatureDrag.remove(_onNodeDrag);
+  }
+
+  enableSegmentMarkersDragging() {
+    mapController!.onFeatureDrag.add(_onSegmentMarkerDrag);
+  }
+
+  disableSegmentMarkersDragging() {
+    mapController!.onFeatureDrag.remove(_onSegmentMarkerDrag);
+    if (startpoint != null) {
+      mapController!.removeSymbol(startpoint!);
+      startpoint = null;
+    }
+    if (endpoint != null) {
+      mapController!.removeSymbol(endpoint!);
+      endpoint = null;
+    }
+    if (shownode != null) {
+      mapController!.removeSymbol(shownode!);
+      shownode = null;
+    }
   }
 
   void addQueryLine(start, end) async {
@@ -1047,7 +1148,7 @@ class _MyMaplibreState extends State<MyMapLibre>
       start = end;
       end = tmp;
     }
-    if (end < track!.getCoordsList().length) {
+    if (end < track!.getCoordsList().length - 1) {
       end += 1;
     }
 
@@ -1056,17 +1157,38 @@ class _MyMaplibreState extends State<MyMapLibre>
 
     queryTrack = Track(queryWpts);
     await queryTrack!.init();
-    debugPrint('${queryTrack!.getLength()}');
 
     queryLine = await mapController!.addLine(
       LineOptions(
         geometry: queryCoords,
-        lineColor: invert(UserSimplePreferences.getTrackColor() ?? primaryColor)
-            .toHexStringRGB(),
-        lineWidth: UserSimplePreferences.getTrackWidth() ?? 4,
+        lineColor: Colors.yellow.toHexStringRGB(),
+        lineWidth: trackWidth * 2,
         lineOpacity: 0.9,
       ),
     );
+    removeTrackLine();
+    trackLine = await mapController!.addLine(
+      LineOptions(
+        geometry: track!.getCoordsList(),
+        lineColor: trackColor.toHexStringRGB(),
+        lineWidth: trackWidth,
+        lineOpacity: 0.9,
+      ),
+    );
+
+    startpoint = await mapController!.addSymbol(SymbolOptions(
+        draggable: true,
+        iconImage: 'startpoint-marker',
+        geometry: track!.getCoordsList()[start],
+        iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
+
+    endpoint = await mapController!.addSymbol(SymbolOptions(
+        draggable: true,
+        iconImage: 'endpoint-marker',
+        geometry: track!.getCoordsList()[end],
+        iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
+
+    showBottomPanel = true;
     setState(() {});
   }
 
@@ -1077,10 +1199,14 @@ class _MyMaplibreState extends State<MyMapLibre>
     }
     startSegmentPoint = -1;
     endSegmentPoint = -1;
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+
     return LayoutBuilder(builder: (context, constraints) {
       return Stack(children: [
         MapLibreMap(
@@ -1099,6 +1225,11 @@ class _MyMaplibreState extends State<MyMapLibre>
                     "assets/symbols/node-delete-web.png");
                 addImageFromAsset(
                     mapController!, "waypoint", "assets/symbols/waypoint.png");
+                addImageFromAsset(mapController!, "startpoint-marker",
+                    "assets/symbols/startpoint.png");
+
+                addImageFromAsset(mapController!, "endpoint-marker",
+                    "assets/symbols/endpoint.png");
               } else {
                 addImageFromAsset(mapController!, "node-plain",
                     "assets/symbols/node-plain.png");
@@ -1108,6 +1239,12 @@ class _MyMaplibreState extends State<MyMapLibre>
                     "assets/symbols/node-delete.png");
                 addImageFromAsset(mapController!, "waypoint",
                     "assets/symbols/waypoint-mobile.png");
+
+                addImageFromAsset(mapController!, "startpoint-marker",
+                    "assets/symbols/startpoint.png");
+
+                addImageFromAsset(mapController!, "endpoint-marker",
+                    "assets/symbols/endpoint.png");
               }
             },
             initialCameraPosition: const CameraPosition(
@@ -1117,118 +1254,18 @@ class _MyMaplibreState extends State<MyMapLibre>
             styleString: 'assets/styles/mainmap_style.json'
             // styleString: mapStyle
             ),
-        // Container(
-
-        //     child: CustomPaint(
-        //         painter: myPaint(),
-        //         size: Size(constraints.maxWidth, constraints.maxHeight))),
 
         if (infoMode) ...[
-          GestureDetector(
-            onTap: () async {
-              int idx = await track!
-                  .getClosestNodeFrom(mapController!.cameraPosition!.target);
-              if (startSegmentPoint == -1) {
-                startSegmentPoint = idx;
-              } else {
-                if (endSegmentPoint == -1) {
-                  endSegmentPoint = idx;
-                } else {
-                  removeQueryLine();
-                  startSegmentPoint = idx;
-                  endSegmentPoint = -1;
-                }
-              }
-              mapController!.animateCamera(
-                CameraUpdate.newLatLng(track!.getCoordsList()[idx]),
-                duration: const Duration(milliseconds: 100),
-              );
-              if (startSegmentPoint != -1 && endSegmentPoint != -1) {
-                addQueryLine(startSegmentPoint, endSegmentPoint);
-              }
-            },
-            child: SelectPointFromMapCenter(
-              constraints: constraints,
-            ),
-          ),
-          Positioned(
-              top: 30,
-              right: 30,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Tooltip(
-                        message: 'Select the start point of the segment',
-                        child: ElevatedButton(
-                            onPressed: () async {
-                              startSegmentPoint = await track!
-                                  .getClosestNodeFrom(
-                                      mapController!.cameraPosition!.target);
-
-                              mapController!.animateCamera(
-                                CameraUpdate.newLatLng(
-                                    track!.getCoordsList()[startSegmentPoint]),
-                                duration: const Duration(milliseconds: 100),
-                              );
-                              if (endSegmentPoint != -1) {
-                                addQueryLine(
-                                    startSegmentPoint, endSegmentPoint);
-                              }
-                            },
-                            style: styleElevatedButtons,
-                            child: Text('Start point')),
-                      ),
-                      const SizedBox(
-                        width: 20,
-                      ),
-                      Tooltip(
-                        message: 'Select the end point of the segment',
-                        child: ElevatedButton(
-                            onPressed: () async {
-                              endSegmentPoint = await track!.getClosestNodeFrom(
-                                  mapController!.cameraPosition!.target);
-
-                              mapController!.animateCamera(
-                                CameraUpdate.newLatLng(
-                                    track!.getCoordsList()[endSegmentPoint]),
-                                duration: const Duration(milliseconds: 100),
-                              );
-                              if (startSegmentPoint != -1) {
-                                addQueryLine(
-                                    startSegmentPoint, endSegmentPoint);
-                              }
-                            },
-                            style: styleElevatedButtons,
-                            child: Text('End point')),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  Tooltip(
-                    message: 'this is a tooltip',
-                    child: ElevatedButton(
-                      onPressed: (queryTrack != null)
-                          ? () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        TrackInfo(track: queryTrack),
-                                  ));
-                            }
-                          : null,
-                      style: styleElevatedButtons,
-                      child: Icon(Icons.add_chart_sharp),
-                    ),
-                  )
-                ],
-              ))
+          // GestureDetector(
+          //   onTap: () async {
+          //     newSegmentPoint(mapController!.cameraPosition!.target);
+          //   },
+          //   child: SelectPointFromMapCenter(
+          //     constraints: constraints,
+          //   ),
+          // ),
         ],
-
+        // TRACK EDITION TOOLS
         Positioned(
           left: 10,
           top: 10,
@@ -1269,7 +1306,18 @@ class _MyMaplibreState extends State<MyMapLibre>
                         if (editMode) return;
                         setState(() {
                           infoMode = !infoMode;
-                          resetInfoMode();
+                          if (infoMode) {
+                            disableNodeDragging();
+                            enableSegmentMarkersDragging();
+                            startSegmentPoint = 0;
+                            endSegmentPoint = track!.getCoordsList().length - 1;
+                            addQueryLine(0, track!.getCoordsList().length - 1);
+                          } else {
+                            disableSegmentMarkersDragging();
+                            enableNodeDragging();
+                            showBottomPanel = false;
+                            resetInfoMode();
+                          }
                         });
                       },
                       child: CircleAvatar(
@@ -1484,6 +1532,20 @@ class _MyMaplibreState extends State<MyMapLibre>
             )
           ]),
         ),
+        AnimatedPositioned(
+          duration: Duration(milliseconds: 200),
+          bottom: showBottomPanel ? 0 : -(height / 2),
+          left: 0,
+          child: Container(
+              color: Colors.green.withOpacity(0.9),
+              height: height / 3,
+              width: width,
+              child: TrackInfo(
+                  controller: widget.controller,
+                  track: queryTrack,
+                  width: width,
+                  height: (height / 5))),
+        )
       ]);
     });
   }
