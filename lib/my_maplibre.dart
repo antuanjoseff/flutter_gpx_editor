@@ -22,6 +22,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'expandedSection.dart';
 import './widgets/selectPointFromMapCenter.dart';
 import './pages/TrackInfo.dart';
+import 'dart:math' as math;
 
 class MyMapLibre extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -127,6 +128,12 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   int selectedNode = -1;
   String selectedNodeType = '';
+
+  // Chart Variables
+  late double minY2;
+  late double maxY2;
+  late double minY;
+  late double maxY;
 
   final thr = Throttling<void>(duration: const Duration(milliseconds: 100));
   final deb = Debouncing<void>(duration: const Duration(milliseconds: 500));
@@ -1171,6 +1178,10 @@ class _MyMaplibreState extends State<MyMapLibre>
 
     queryTrack = Track(queryWpts);
     await queryTrack!.init();
+    minY2 = queryTrack!.getMinSpeed();
+    maxY2 = queryTrack!.getMaxSpeed();
+    minY = queryTrack!.getMinElevation();
+    maxY = queryTrack!.getMaxElevation();
 
     queryLine = await mapController!.addLine(
       LineOptions(
@@ -1559,13 +1570,133 @@ class _MyMaplibreState extends State<MyMapLibre>
               color: Colors.white.withOpacity(0.9),
               height: height / 3,
               width: width,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: TrackInfo(
-                    controller: widget.controller,
-                    track: queryTrack,
-                    width: width,
-                    height: (height / 5)),
+              child: Column(
+                children: [
+                  ...[
+                    queryTrack != null
+                        ? Container(
+                            color: secondColor,
+                            child: DefaultTextStyle(
+                              style: TextStyle(color: white),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    Container(
+                                      decoration: const BoxDecoration(
+                                          border: Border(
+                                        right: BorderSide(
+                                          //                   <--- right side
+                                          color: Colors.white,
+                                          width: 3.0,
+                                        ),
+                                      )),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 8.0),
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.directions_walk_rounded,
+                                                color: white),
+                                            Text(formatDistance(
+                                                queryTrack!.getLength())),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: const BoxDecoration(
+                                          border: Border(
+                                        right: BorderSide(
+                                          //                   <--- right side
+                                          color: Colors.white,
+                                          width: 3.0,
+                                        ),
+                                      )),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 8.0),
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.hourglass_bottom_rounded,
+                                                color: white),
+                                            Text(
+                                                '${formatDuration(queryTrack!.getDuration())}')
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: const BoxDecoration(
+                                          border: Border(
+                                        right: BorderSide(
+                                          //                   <--- right side
+                                          color: Colors.white,
+                                          width: 3.0,
+                                        ),
+                                      )),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 8.0),
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.speed, color: white),
+                                            Text(
+                                                '${(queryTrack!.getLength() / queryTrack!.getDuration().inSeconds * 3.6).toStringAsFixed(2)}km/h'),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: const BoxDecoration(
+                                          border: Border(
+                                        right: BorderSide(
+                                          //                   <--- right side
+                                          color: Colors.white,
+                                          width: 3.0,
+                                        ),
+                                      )),
+                                      child: Padding(
+                                        padding: EdgeInsets.only(right: 8.0),
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.change_history_rounded,
+                                                color: white),
+                                            Text(
+                                                '${queryTrack!.getElevationGain()}m'),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Column(
+                                      children: [
+                                        Transform.rotate(
+                                            angle: math.pi,
+                                            child: Icon(
+                                                Icons.change_history_rounded,
+                                                color: white)),
+                                        Text(
+                                            '${queryTrack!.getElevationLoss()}m'),
+                                      ],
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          )
+                        : Container()
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: TrackInfo(
+                        controller: widget.controller,
+                        track: queryTrack,
+                        width: width,
+                        height: (height / 5)),
+                  ),
+                ],
               )),
         )
       ]);

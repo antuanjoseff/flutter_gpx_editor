@@ -196,3 +196,37 @@ Color invert(Color color) {
 
   return Color.fromARGB((color.opacity * 255).round(), r, g, b);
 }
+
+String formatDistance(double length) {
+  int kms = (length / 1000).floor().toInt();
+  int mts = (length - (kms * 1000)).toInt();
+
+  String plural = kms > 1 ? 's ' : ' ';
+
+  String format = '';
+  if (kms > 0) {
+    format = '${kms.toString()}km${plural}';
+  }
+
+  if (mts != 0) {
+    format += ' ${mts}m';
+  }
+
+  return format;
+}
+
+String formatDuration(Duration duration) {
+  String twoDigits(int n) => n.toString().padLeft(2, "0");
+
+  String days = duration.inDays > 0 ? '${duration.inDays} days' : '';
+  String hours = duration.inHours > 0 ? '${duration.inHours}h' : '';
+
+  String minutes = twoDigits(duration.inMinutes.remainder(60).abs()) + 'm';
+  String seconds = twoDigits(duration.inSeconds.remainder(60).abs()) + 's';
+
+  return "$days $hours $minutes $seconds";
+}
+
+double getSpeedValueOnElevationAxis(val, maxX, maxY, minY, minY2, maxY2) {
+  return (val - minY) / (maxY - minY) * (maxY2 - minY2) + minY2;
+}

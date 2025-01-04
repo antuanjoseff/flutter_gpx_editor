@@ -3,6 +3,7 @@ import '../classes/track.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:gpx_editor/vars/vars.dart';
 import 'dart:math' as math;
+import '../util.dart';
 
 class TrackInfo extends StatefulWidget {
   final controller;
@@ -29,46 +30,6 @@ class _TrackInfoState extends State<TrackInfo> {
   ];
 
   int numberOfTags = 5;
-
-  String formatDistance(double length) {
-    int kms = (length / 1000).floor().toInt();
-    int mts = (length - (kms * 1000)).toInt();
-
-    String plural = kms > 1 ? 's ' : ' ';
-
-    String format = '';
-    if (kms > 0) {
-      format = '${kms.toString()}Km${plural}';
-    }
-
-    if (mts != 0) {
-      format += ' ${mts}m';
-    }
-
-    return format;
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-
-    String days = duration.inDays > 0 ? '${duration.inDays} days' : '';
-    String hours = duration.inHours > 0 ? '${duration.inHours} h' : '';
-
-    String minutes = twoDigits(duration.inMinutes.remainder(60).abs()) + ' min';
-    String seconds = twoDigits(duration.inSeconds.remainder(60).abs()) + 'seg';
-
-    return "$days $hours $minutes $seconds";
-  }
-
-  List<FlSpot> getSpots() {
-    List<FlSpot> chartLineSpots = [];
-    List<int> xValues = widget.track!.getXChartLabels();
-    List<int> yValues = widget.track!.getElevations();
-    for (int i = 0; i < widget.track!.getCoordsList().length; i++) {
-      chartLineSpots.add(FlSpot(xValues[i].toDouble(), yValues[i].toDouble()));
-    }
-    return chartLineSpots;
-  }
 
   Widget formatLabel(value, meta) {
     if (value == meta.max) {
@@ -111,48 +72,55 @@ class _TrackInfoState extends State<TrackInfo> {
     elevationGain = widget.track!.getElevationGain();
     elevationLoss = widget.track!.getElevationLoss();
 
+    double minY2 = widget.track!.getMinSpeed();
+    double maxY2 = widget.track!.getMaxSpeed();
+    double minY = widget.track!.getMinElevation();
+    double maxY = widget.track!.getMaxElevation();
+    List<FlSpot> lengthSpots = [];
+    List<FlSpot> elevationSpots = [];
+    List<FlSpot> speedSpots = [];
+
+    List<FlSpot> getSpotsElevation() {
+      List<FlSpot> chartLineSpots = [];
+      List<int> xValues = widget.track!.getXChartLabels();
+      List<int> yValues = widget.track!.getElevations();
+      // List<double> y2Values = widget.track!.getSpeeds();
+
+      for (int i = 0; i < widget.track!.getCoordsList().length; i++) {
+        chartLineSpots.add(FlSpot(
+          xValues[i].toDouble(),
+          yValues[i].toDouble(),
+          // y2Values[i].toDouble(),
+        ));
+      }
+
+      elevationSpots = chartLineSpots;
+      return chartLineSpots;
+    }
+
+    List<FlSpot> getSpotsSpeed() {
+      List<FlSpot> chartLineSpots = [];
+      List<int> xValues = widget.track!.getXChartLabels();
+      List<double> yValues = widget.track!.getSpeeds();
+
+      for (int i = 0; i < widget.track!.getSpeeds().length; i++) {
+        double Y2 = yValues[i].toDouble();
+
+        chartLineSpots.add(FlSpot(
+          xValues[i].toDouble(),
+          (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY,
+          // yValues[i].toDouble(),
+        ));
+      }
+      speedSpots = chartLineSpots;
+      return chartLineSpots;
+    }
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  Icon(Icons.straighten_outlined),
-                  Text(formatDistance(length)),
-                ],
-              ),
-              Column(
-                children: [
-                  Icon(Icons.hourglass_bottom_rounded),
-                  Text(_formatDuration(duration))
-                ],
-              ),
-              Column(
-                children: [
-                  Icon(Icons.speed),
-                  Text('$speed Km/h'),
-                ],
-              ),
-              Column(
-                children: [
-                  Icon(Icons.change_history_rounded),
-                  Text('$elevationGain m'),
-                ],
-              ),
-              Column(
-                children: [
-                  Transform.rotate(
-                      angle: math.pi,
-                      child: Icon(Icons.change_history_rounded)),
-                  Text('$elevationLoss m'),
-                ],
-              )
-            ],
-          ),
           SizedBox(
             width: widget.width,
             height: widget.height + 50,
@@ -168,33 +136,98 @@ class _TrackInfoState extends State<TrackInfo> {
                   show: false,
                 ),
                 lineTouchData: LineTouchData(
+                    touchSpotThreshold: 50,
+                    getTouchLineStart: (_, __) => -double.infinity,
+                    getTouchLineEnd: (_, __) => double.infinity,
+                    getTouchedSpotIndicator:
+                        (LineChartBarData barData, List<int> spotIndexes) {
+                      return spotIndexes.map((spotIndex) {
+                        return TouchedSpotIndicatorData(
+                          const FlLine(
+                            color: Colors.red,
+                            strokeWidth: 1.5,
+                            dashArray: [8, 2],
+                          ),
+                          FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) {
+                              return FlDotCirclePainter(
+                                radius: 6,
+                                color: Colors.blue,
+                                strokeWidth: 3,
+                                strokeColor: Colors.black,
+                              );
+                            },
+                          ),
+                        );
+                      }).toList();
+                    },
                     touchCallback:
                         (FlTouchEvent event, LineTouchResponse? response) {
                       if (response == null || response.lineBarSpots == null) {
                         return;
                       }
-                      if (event is FlTapUpEvent) {
-                        final spotIndex =
-                            response.lineBarSpots!.first.spotIndex;
-                      }
                     },
                     touchTooltipData: LineTouchTooltipData(
+                      showOnTopOfTheChartBoxArea: true,
                       getTooltipColor: (LineBarSpot touchedSpot) =>
                           Colors.green,
                       getTooltipItems: (List<LineBarSpot> lineBarsSpot) {
+                        LineBarSpot lineBarSpot = lineBarsSpot[0];
+                        double node = lineBarSpot.x;
+                        int idx = lineBarSpot.spotIndex;
+                        widget.controller.showNode(widget.track!.getNode(idx));
+
+                        double e = elevationSpots[idx].y;
+                        double val = speedSpots[idx].y;
+
+                        double s =
+                            (val - minY) / (maxY - minY) * (maxY2 - minY2) +
+                                minY2;
+
+                        String d = formatDistance(lineBarsSpot[0].x);
+                        String label = '${e}m\n${s.toStringAsFixed(2)}km\n$d';
+
                         return lineBarsSpot.map((lineBarSpot) {
-                          double node = lineBarSpot.x;
-                          int idx = lineBarSpot.spotIndex;
-                          String label = '${lineBarSpot.y.toString()} $node m';
-                          widget.controller
-                              .showNode(widget.track!.getNode(idx));
-                          return LineTooltipItem(
-                            label,
-                            const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
+                          if (lineBarSpot.barIndex == 0) {
+                            return LineTooltipItem(
+                              '',
+                              const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: label,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                )
+                              ],
+                            );
+                          } else {
+                            // double value = (lineBarSpot.y - minY) /
+                            //         (maxY - minY) *
+                            //         (maxY2 - minY2) +
+                            //     minY2;
+                            // return LineTooltipItem(
+                            //   'speed',
+                            //   const TextStyle(
+                            //     color: Colors.white,
+                            //     fontWeight: FontWeight.bold,
+                            //   ),
+                            //   children: [
+                            //     TextSpan(
+                            //       text: '${value.toStringAsFixed(2)} km/h',
+                            //       style: const TextStyle(
+                            //         color: Colors.white,
+                            //         fontWeight: FontWeight.w900,
+                            //       ),
+                            //     )
+                            //   ],
+                            // );
+                          }
                         }).toList();
                       },
                     )),
@@ -224,7 +257,15 @@ class _TrackInfoState extends State<TrackInfo> {
                 ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: getSpots(),
+                      spots: getSpotsSpeed(),
+                      color: Colors.green,
+                      barWidth: 2,
+                      isCurved: true,
+                      dotData: const FlDotData(
+                        show: false,
+                      )),
+                  LineChartBarData(
+                    spots: getSpotsElevation(),
                     color: primaryColor,
                     barWidth: 2,
                     isCurved: false,

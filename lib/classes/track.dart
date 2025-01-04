@@ -11,10 +11,14 @@ class Track {
   // Accumulated distance of each track point. Used in chart
   List<int> xChartLabels = [];
   List<int> elevations = [];
+  List<double> speeds = [];
   double minElevation = double.infinity;
   double maxElevation = 0;
   int elevationGain = 0;
   int elevationLoss = 0;
+  double minSpeed = 0;
+  double maxSpeed = 0;
+
   List<Wpt> wpts = [];
 
   // Array of coordinates to draw a linestring on map
@@ -43,7 +47,20 @@ class Track {
       if (gpxCoords.isNotEmpty) {
         LatLng prev = gpxCoords[gpxCoords.length - 1];
         inc = getDistanceFromLatLonInMeters(cur, prev);
+        if (trackSegment[i].time != null && trackSegment[i - 1].time != null) {
+          double sp = 3.6 *
+              (inc /
+                  (trackSegment[i].time!)
+                      .difference(trackSegment[i - 1].time!)
+                      .inSeconds);
+          minSpeed = sp < minSpeed ? sp : minSpeed;
+          maxSpeed = sp > maxSpeed ? sp : maxSpeed;
+          speeds.add(sp);
+        }
         if (trackSegment[i].ele != null && trackSegment[i - 1].ele != null) {
+          double e = trackSegment[i].ele!;
+          minElevation = (e < minElevation) ? e : minElevation;
+          maxElevation = (e > maxElevation) ? e : maxElevation;
           if (trackSegment[i].ele!.floor() > trackSegment[i - 1].ele!.floor()) {
             elevationGain +=
                 trackSegment[i].ele!.floor() - trackSegment[i - 1].ele!.floor();
@@ -61,8 +78,6 @@ class Track {
       trackSegment[i].ele ??= 0;
       double e = trackSegment[i].ele!;
       elevations.add(e.floor());
-      minElevation = (e < minElevation) ? e : minElevation;
-      maxElevation = (e > maxElevation) ? e : maxElevation;
     }
   }
 
@@ -78,12 +93,12 @@ class Track {
     return length;
   }
 
-  int getMinElevation() {
-    return minElevation.floor();
+  double getMinElevation() {
+    return minElevation;
   }
 
-  int getMaxElevation() {
-    return maxElevation.floor();
+  double getMaxElevation() {
+    return maxElevation;
   }
 
   List<int> getElevations() {
@@ -92,6 +107,18 @@ class Track {
 
   List<int> getXChartLabels() {
     return xChartLabels;
+  }
+
+  double getMinSpeed() {
+    return minSpeed;
+  }
+
+  double getMaxSpeed() {
+    return maxSpeed;
+  }
+
+  List<double> getSpeeds() {
+    return speeds;
   }
 
   Duration getDuration() {
