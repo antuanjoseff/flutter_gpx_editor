@@ -234,14 +234,16 @@ class _MyMaplibreState extends State<MyMapLibre>
     if (shownode == null) {
       shownode = await mapController!.addSymbol(SymbolOptions(
           draggable: false,
-          iconImage: 'waypoint',
+          iconImage: 'current-selection',
           geometry: location,
-          iconOffset: kIsWeb ? Offset(5, -28) : Offset(0, -25)));
+          iconOffset: kIsWeb ? Offset(-25, 0) : Offset(0, -25)));
     } else {
       _updateSelectedSymbol(
           shownode!,
           SymbolOptions(
-              geometry: location, iconImage: 'waypoint', draggable: false));
+              geometry: location,
+              iconImage: 'current-selection',
+              draggable: false));
     }
   }
 
@@ -930,15 +932,26 @@ class _MyMaplibreState extends State<MyMapLibre>
   Future<Line?> loadTrack(List<Wpt> trackSegment) async {
     deactivateTools();
     showTools = false;
+
     if (trackLine != null) {
       removeTrackLine();
       await removeNodeSymbols();
       edits = [];
       track!.reset();
     }
+    if (queryLine != null) {
+      removeQueryLine();
+    }
+
     track = Track(trackSegment);
     await track!.init();
     nodesRatio = track!.getLength() / track!.getCoordsList().length;
+
+    if (infoMode) {
+      startSegmentPoint = 0;
+      endSegmentPoint = track!.getCoordsList().length - 1;
+      addQueryLine(0, track!.getCoordsList().length - 1);
+    }
 
     mapController!.moveCamera(
       CameraUpdate.newLatLngBounds(
@@ -1120,7 +1133,8 @@ class _MyMaplibreState extends State<MyMapLibre>
     mapController!.onFeatureDrag.remove(_onNodeDrag);
   }
 
-  enableSegmentMarkersDragging() {
+  enableSegmentMarkersDragging() async {
+    await mapController!.setSymbolIconAllowOverlap(true);
     mapController!.onFeatureDrag.add(_onSegmentMarkerDrag);
   }
 
@@ -1230,6 +1244,9 @@ class _MyMaplibreState extends State<MyMapLibre>
 
                 addImageFromAsset(mapController!, "endpoint-marker",
                     "assets/symbols/endpoint.png");
+
+                addImageFromAsset(mapController!, "current-selection",
+                    "assets/symbols/current-selection.png");
               } else {
                 addImageFromAsset(mapController!, "node-plain",
                     "assets/symbols/node-plain.png");
@@ -1245,6 +1262,8 @@ class _MyMaplibreState extends State<MyMapLibre>
 
                 addImageFromAsset(mapController!, "endpoint-marker",
                     "assets/symbols/endpoint.png");
+                addImageFromAsset(mapController!, "current-selection",
+                    "assets/symbols/current-selection.png");
               }
             },
             initialCameraPosition: const CameraPosition(
@@ -1537,14 +1556,17 @@ class _MyMaplibreState extends State<MyMapLibre>
           bottom: showBottomPanel ? 0 : -(height / 2),
           left: 0,
           child: Container(
-              color: Colors.green.withOpacity(0.9),
+              color: Colors.white.withOpacity(0.9),
               height: height / 3,
               width: width,
-              child: TrackInfo(
-                  controller: widget.controller,
-                  track: queryTrack,
-                  width: width,
-                  height: (height / 5))),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: TrackInfo(
+                    controller: widget.controller,
+                    track: queryTrack,
+                    width: width,
+                    height: (height / 5)),
+              )),
         )
       ]);
     });

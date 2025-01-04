@@ -13,6 +13,8 @@ class Track {
   List<int> elevations = [];
   double minElevation = double.infinity;
   double maxElevation = 0;
+  int elevationGain = 0;
+  int elevationLoss = 0;
   List<Wpt> wpts = [];
 
   // Array of coordinates to draw a linestring on map
@@ -41,6 +43,15 @@ class Track {
       if (gpxCoords.isNotEmpty) {
         LatLng prev = gpxCoords[gpxCoords.length - 1];
         inc = getDistanceFromLatLonInMeters(cur, prev);
+        if (trackSegment[i].ele != null && trackSegment[i - 1].ele != null) {
+          if (trackSegment[i].ele!.floor() > trackSegment[i - 1].ele!.floor()) {
+            elevationGain +=
+                trackSegment[i].ele!.floor() - trackSegment[i - 1].ele!.floor();
+          } else {
+            elevationLoss +=
+                trackSegment[i - 1].ele!.floor() - trackSegment[i].ele!.floor();
+          }
+        }
       }
 
       bounds!.expand(cur);
@@ -53,6 +64,14 @@ class Track {
       minElevation = (e < minElevation) ? e : minElevation;
       maxElevation = (e > maxElevation) ? e : maxElevation;
     }
+  }
+
+  int getElevationGain() {
+    return elevationGain;
+  }
+
+  int getElevationLoss() {
+    return elevationLoss;
   }
 
   double getLength() {

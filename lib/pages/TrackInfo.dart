@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../classes/track.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:gpx_editor/vars/vars.dart';
+import 'dart:math' as math;
 
 class TrackInfo extends StatefulWidget {
   final controller;
@@ -26,6 +27,8 @@ class _TrackInfoState extends State<TrackInfo> {
     Colors.red.withOpacity(0.5),
     Colors.red.withOpacity(0.1),
   ];
+
+  int numberOfTags = 5;
 
   String formatDistance(double length) {
     int kms = (length / 1000).floor().toInt();
@@ -89,6 +92,12 @@ class _TrackInfoState extends State<TrackInfo> {
     }
   }
 
+  late double length;
+  late Duration duration;
+  late String speed;
+  late int elevationGain;
+  late int elevationLoss;
+
   @override
   void dispose() {
     super.dispose();
@@ -96,20 +105,68 @@ class _TrackInfoState extends State<TrackInfo> {
 
   @override
   Widget build(BuildContext context) {
+    length = widget.track!.getLength();
+    duration = widget.track!.getDuration();
+    speed = (length / duration.inSeconds * 3.6).toStringAsFixed(2);
+    elevationGain = widget.track!.getElevationGain();
+    elevationLoss = widget.track!.getElevationLoss();
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Icon(Icons.straighten_outlined),
+                  Text(formatDistance(length)),
+                ],
+              ),
+              Column(
+                children: [
+                  Icon(Icons.hourglass_bottom_rounded),
+                  Text(_formatDuration(duration))
+                ],
+              ),
+              Column(
+                children: [
+                  Icon(Icons.speed),
+                  Text('$speed Km/h'),
+                ],
+              ),
+              Column(
+                children: [
+                  Icon(Icons.change_history_rounded),
+                  Text('$elevationGain m'),
+                ],
+              ),
+              Column(
+                children: [
+                  Transform.rotate(
+                      angle: math.pi,
+                      child: Icon(Icons.change_history_rounded)),
+                  Text('$elevationLoss m'),
+                ],
+              )
+            ],
+          ),
           SizedBox(
             width: widget.width,
-            height: widget.height,
+            height: widget.height + 50,
             child: LineChart(LineChartData(
                 minX: 0,
                 maxX: widget.track!.getLength(),
                 minY: widget.track.getMinElevation(),
                 maxY: widget.track.getMaxElevation(),
-                gridData: FlGridData(show: false),
+                borderData: FlBorderData(
+                  show: false,
+                ),
+                gridData: FlGridData(
+                  show: false,
+                ),
                 lineTouchData: LineTouchData(
                     touchCallback:
                         (FlTouchEvent event, LineTouchResponse? response) {
@@ -157,7 +214,7 @@ class _TrackInfoState extends State<TrackInfo> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 42,
-                      interval: 5000,
+                      interval: (widget.track!.getLength() / numberOfTags),
                       getTitlesWidget: (value, meta) =>
                           formatLabel(value, meta),
                     ),
@@ -187,23 +244,6 @@ class _TrackInfoState extends State<TrackInfo> {
                   ),
                 ])),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  Text('Track length'),
-                  Text(formatDistance(widget.track!.getLength())),
-                ],
-              ),
-              Column(
-                children: [
-                  Text('Track Duration'),
-                  Text(_formatDuration(widget.track!.getDuration()))
-                ],
-              )
-            ],
-          )
         ],
       ),
     );
