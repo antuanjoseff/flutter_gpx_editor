@@ -196,6 +196,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // );
     } else {
       final String fileContent = await file.readAsString();
+
       return (fileName, fileContent);
       // if (context.mounted) {
       //   await showDialog<void>(
@@ -388,7 +389,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       filename = msg;
 
                       try {
+                        debugPrint('init');
                         gpxOriginal = await GeoXml.fromGpxString(content);
+                        debugPrint('end');
                         if (gpxOriginal!.trks[0].trksegs.length >= 1) {
                           showSnackBar(
                             context,

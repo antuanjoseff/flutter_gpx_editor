@@ -107,6 +107,8 @@ class _MyMaplibreState extends State<MyMapLibre>
   List<Wpt> mapWayPoints = []; //Gpx WPTS
 
   bool infoMode = false;
+  bool showChart = true;
+  double arrowRotation = 0;
   bool editMode = false;
   bool disableMapChanged = false;
 
@@ -980,6 +982,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         lineOpacity: 0.9,
       ),
     );
+
     setState(() {
       trackLoaded = true;
     });
@@ -1337,6 +1340,7 @@ class _MyMaplibreState extends State<MyMapLibre>
                         setState(() {
                           infoMode = !infoMode;
                           if (infoMode) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             disableNodeDragging();
                             enableSegmentMarkersDragging();
                             startSegmentPoint = 0;
@@ -1563,12 +1567,40 @@ class _MyMaplibreState extends State<MyMapLibre>
           ]),
         ),
         AnimatedPositioned(
-          duration: Duration(milliseconds: 200),
-          bottom: showBottomPanel ? 0 : -(height / 2),
+            duration: Duration(milliseconds: 400),
+            bottom: showBottomPanel && showChart
+                ? (height / 5) + 155
+                : (showBottomPanel && !showChart)
+                    ? 85
+                    : -(height / 2),
+            right: 10,
+            child: ElevatedButton(
+              style: styleElevatedButtons,
+              onPressed: () async {
+                showChart = !showChart;
+                arrowRotation += 1 / 2;
+                if (!showChart && shownode != null) {
+                  await mapController!.removeSymbol(shownode!);
+                  shownode = null;
+                }
+                setState(() {});
+              },
+              child: AnimatedRotation(
+                  duration: Duration(milliseconds: 500),
+                  turns: arrowRotation,
+                  child: Icon(Icons.arrow_downward, size: 20, color: white)),
+            )),
+        AnimatedPositioned(
+          duration: Duration(milliseconds: 400),
+          bottom: showBottomPanel && showChart
+              ? 0
+              : (showBottomPanel && !showChart)
+                  ? -((height / 5) + 61)
+                  : -(height / 2),
           left: 0,
           child: Container(
               color: Colors.white.withOpacity(0.9),
-              height: height / 3,
+              height: showChart ? height / 3 : null,
               width: width,
               child: Column(
                 children: [
@@ -1577,111 +1609,142 @@ class _MyMaplibreState extends State<MyMapLibre>
                         ? Container(
                             color: secondColor,
                             child: DefaultTextStyle(
-                              style: TextStyle(color: white),
+                              style: TextStyle(
+                                  color: white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20),
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    Container(
-                                      decoration: const BoxDecoration(
-                                          border: Border(
-                                        right: BorderSide(
-                                          //                   <--- right side
-                                          color: Colors.white,
-                                          width: 3.0,
-                                        ),
-                                      )),
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 8.0),
-                                        child: Column(
-                                          children: [
-                                            Icon(Icons.directions_walk_rounded,
-                                                color: white),
-                                            Text(formatDistance(
-                                                queryTrack!.getLength())),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      decoration: const BoxDecoration(
-                                          border: Border(
-                                        right: BorderSide(
-                                          //                   <--- right side
-                                          color: Colors.white,
-                                          width: 3.0,
-                                        ),
-                                      )),
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 8.0),
-                                        child: Column(
-                                          children: [
-                                            Icon(Icons.hourglass_bottom_rounded,
-                                                color: white),
-                                            Text(
-                                                '${formatDuration(queryTrack!.getDuration())}')
-                                          ],
+                                child: SizedBox(
+                                  height: 65,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                              border: Border(
+                                            right: BorderSide(
+                                              //                   <--- right side
+                                              color: Colors.white,
+                                              width: 3.0,
+                                            ),
+                                          )),
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 8.0),
+                                            child: Column(
+                                              children: [
+                                                Icon(
+                                                    Icons
+                                                        .directions_walk_rounded,
+                                                    color: white),
+                                                SizedBox(height: 5),
+                                                Text(formatDistance(
+                                                    queryTrack!.getLength())),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    Container(
-                                      decoration: const BoxDecoration(
-                                          border: Border(
-                                        right: BorderSide(
-                                          //                   <--- right side
-                                          color: Colors.white,
-                                          width: 3.0,
-                                        ),
-                                      )),
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 8.0),
-                                        child: Column(
-                                          children: [
-                                            Icon(Icons.speed, color: white),
-                                            Text(
-                                                '${(queryTrack!.getLength() / queryTrack!.getDuration().inSeconds * 3.6).toStringAsFixed(2)}km/h'),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      decoration: const BoxDecoration(
-                                          border: Border(
-                                        right: BorderSide(
-                                          //                   <--- right side
-                                          color: Colors.white,
-                                          width: 3.0,
-                                        ),
-                                      )),
-                                      child: Padding(
-                                        padding: EdgeInsets.only(right: 8.0),
-                                        child: Column(
-                                          children: [
-                                            Icon(Icons.change_history_rounded,
-                                                color: white),
-                                            Text(
-                                                '${queryTrack!.getElevationGain()}m'),
-                                          ],
+                                      Expanded(
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                              border: Border(
+                                            right: BorderSide(
+                                              //                   <--- right side
+                                              color: Colors.white,
+                                              width: 3.0,
+                                            ),
+                                          )),
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 8.0),
+                                            child: Column(
+                                              children: [
+                                                Icon(
+                                                    Icons
+                                                        .hourglass_bottom_rounded,
+                                                    color: white),
+                                                SizedBox(height: 5),
+                                                Text(
+                                                    '${formatDuration(queryTrack!.getDuration())}')
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    Column(
-                                      children: [
-                                        Transform.rotate(
-                                            angle: math.pi,
-                                            child: Icon(
-                                                Icons.change_history_rounded,
-                                                color: white)),
-                                        Text(
-                                            '${queryTrack!.getElevationLoss()}m'),
-                                      ],
-                                    )
-                                  ],
+                                      Expanded(
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                              border: Border(
+                                            right: BorderSide(
+                                              //                   <--- right side
+                                              color: Colors.white,
+                                              width: 3.0,
+                                            ),
+                                          )),
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 8.0),
+                                            child: Column(
+                                              children: [
+                                                Icon(Icons.speed, color: white),
+                                                SizedBox(height: 5),
+                                                Text(
+                                                    '${(queryTrack!.getLength() / queryTrack!.getDuration().inSeconds * 3.6).toStringAsFixed(2)}km/h'),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                              border: Border(
+                                            right: BorderSide(
+                                              //                   <--- right side
+                                              color: Colors.white,
+                                              width: 3.0,
+                                            ),
+                                          )),
+                                          child: Padding(
+                                            padding:
+                                                EdgeInsets.only(right: 8.0),
+                                            child: Column(
+                                              children: [
+                                                Icon(
+                                                    Icons
+                                                        .change_history_rounded,
+                                                    color: white),
+                                                SizedBox(height: 5),
+                                                Text(
+                                                    '${queryTrack!.getElevationGain()}m'),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Container(
+                                          child: Column(
+                                            children: [
+                                              Transform.rotate(
+                                                  angle: math.pi,
+                                                  child: Icon(
+                                                      Icons
+                                                          .change_history_rounded,
+                                                      color: white)),
+                                              SizedBox(height: 5),
+                                              Text(
+                                                  '${queryTrack!.getElevationLoss()}m'),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -1689,13 +1752,13 @@ class _MyMaplibreState extends State<MyMapLibre>
                         : Container()
                   ],
                   Padding(
-                    padding: const EdgeInsets.only(left: 10),
+                    padding: const EdgeInsets.only(left: 0),
                     child: TrackInfo(
                         controller: widget.controller,
                         track: queryTrack,
                         width: width,
-                        height: (height / 5)),
-                  ),
+                        height: (height / 5) + 50),
+                  )
                 ],
               )),
         )

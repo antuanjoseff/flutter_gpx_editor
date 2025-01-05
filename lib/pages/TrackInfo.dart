@@ -42,17 +42,6 @@ class _TrackInfoState extends State<TrackInfo> {
     }
   }
 
-  Widget formatYLabel(value, meta) {
-    if (value == meta.min || value == meta.max) {
-      return const Text('');
-    } else {
-      return Padding(
-        padding: const EdgeInsets.only(left: 8.0),
-        child: Text('${value.toStringAsFixed(0)}m'),
-      );
-    }
-  }
-
   late double length;
   late Duration duration;
   late String speed;
@@ -79,6 +68,31 @@ class _TrackInfoState extends State<TrackInfo> {
     List<FlSpot> lengthSpots = [];
     List<FlSpot> elevationSpots = [];
     List<FlSpot> speedSpots = [];
+
+    Widget formatYLabel(value, meta) {
+      if (value == meta.min || value == meta.max) {
+        return const Text('');
+      } else {
+        return Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Text('${value.toStringAsFixed(0)}m'),
+        );
+      }
+    }
+
+    Widget formatLeftYLabel(value, meta) {
+      if (value == meta.min || value == meta.max) {
+        return const Text('');
+      } else {
+        double s = (value - minY) / (maxY - minY) * (maxY2 - minY2) + minY2;
+
+        debugPrint('toni $value --   $s');
+        return Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Text('${s.toStringAsFixed(1)}km/h'),
+        );
+      }
+    }
 
     List<FlSpot> getSpotsElevation() {
       List<FlSpot> chartLineSpots = [];
@@ -117,13 +131,13 @@ class _TrackInfoState extends State<TrackInfo> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.only(top: 5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
             width: widget.width,
-            height: widget.height + 50,
+            height: widget.height,
             child: LineChart(LineChartData(
                 minX: 0,
                 maxX: widget.track!.getLength(),
@@ -186,7 +200,7 @@ class _TrackInfoState extends State<TrackInfo> {
                                 minY2;
 
                         String d = formatDistance(lineBarsSpot[0].x);
-                        String label = '${e}m\n${s.toStringAsFixed(2)}km\n$d';
+                        String label = '${e}m\n${s.toStringAsFixed(2)}km/h\n$d';
 
                         return lineBarsSpot.map((lineBarSpot) {
                           if (lineBarSpot.barIndex == 0) {
@@ -232,13 +246,19 @@ class _TrackInfoState extends State<TrackInfo> {
                       },
                     )),
                 titlesData: FlTitlesData(
-                  leftTitles:
-                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 75,
+                    // interval: (widget.track!.getLength() / numberOfTags),
+                    getTitlesWidget: (value, meta) =>
+                        formatLeftYLabel(value, meta),
+                  )),
                   rightTitles: AxisTitles(
-                    axisNameSize: 80,
+                    // axisNameSize: 80,
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 50,
+                      reservedSize: 55,
                       getTitlesWidget: (value, meta) =>
                           formatYLabel(value, meta),
                     ),
