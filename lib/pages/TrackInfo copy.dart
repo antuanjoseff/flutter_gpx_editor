@@ -61,19 +61,11 @@ class _TrackInfoState extends State<TrackInfo> {
     elevationGain = widget.track!.getElevationGain();
     elevationLoss = widget.track!.getElevationLoss();
 
-    if (widget.track.getMaxElevation() > widget.track.getMaxSpeed()) {
-      minY2 = widget.track!.getMinSpeed();
-      maxY2 = widget.track!.getMaxSpeed();
-      minY = widget.track!.getMinElevation();
-      maxY = widget.track!.getMaxElevation();
-    } else {
-      minY = widget.track!.getMinSpeed();
-      maxY = widget.track!.getMaxSpeed();
-      minY2 = widget.track!.getMinElevation();
-      maxY2 = widget.track!.getMaxElevation();
-    }
+    minY2 = widget.track!.getMinSpeed();
+    maxY2 = widget.track!.getMaxSpeed();
+    minY = widget.track!.getMinElevation();
+    maxY = widget.track!.getMaxElevation();
 
-    // debugPrint('debug $minY   $maxY   $minY2   $maxY2');
     super.initState();
   }
 
@@ -112,11 +104,6 @@ class _TrackInfoState extends State<TrackInfo> {
       }
     }
 
-    double elevationRange =
-        widget.track!.getMaxElevation() - widget.track!.getMinElevation();
-    double speedRange =
-        widget.track!.getMaxSpeed() - widget.track!.getMinSpeed();
-
     List<FlSpot> getSpotsElevation() {
       List<FlSpot> chartLineSpots = [];
       List<int> xValues = widget.track!.getXChartLabels();
@@ -125,10 +112,12 @@ class _TrackInfoState extends State<TrackInfo> {
 
       for (int i = 0; i < widget.track!.getCoordsList().length; i++) {
         double Y2 = yValues[i].toDouble();
-        Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
-            ? Y2
-            : (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY;
-        chartLineSpots.add(FlSpot(xValues[i].toDouble(), Y2));
+
+        chartLineSpots.add(FlSpot(
+          xValues[i].toDouble(),
+          (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY,
+          // y2Values[i].toDouble(),
+        ));
       }
 
       elevationSpots = chartLineSpots;
@@ -142,18 +131,20 @@ class _TrackInfoState extends State<TrackInfo> {
 
       for (int i = 0; i < widget.track!.getSpeeds().length; i++) {
         double Y2 = yValues[i].toDouble();
-        Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
-            ? (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY
-            : Y2;
-        chartLineSpots.add(FlSpot(xValues[i].toDouble(), Y2));
+
         chartLineSpots.add(FlSpot(
           xValues[i].toDouble(),
-          Y2,
+          (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY,
         ));
       }
       speedSpots = chartLineSpots;
       return chartLineSpots;
     }
+
+    double elevationRange =
+        widget.track!.getMaxElevation() - widget.track!.getMinElevation();
+    double speedRange =
+        widget.track!.getMaxSpeed() - widget.track!.getMinSpeed();
 
     return Padding(
       padding: const EdgeInsets.only(top: 5),
@@ -163,10 +154,8 @@ class _TrackInfoState extends State<TrackInfo> {
         child: LineChart(LineChartData(
             minX: 0,
             maxX: widget.track!.getLength(),
-            minY: 0,
-            maxY: widget.track.getMaxElevation() > widget.track.getMaxSpeed()
-                ? widget.track.getMaxElevation()
-                : widget.track.getMaxSpeed(),
+            minY: widget.track.getMinElevation(),
+            maxY: widget.track.getMaxElevation(),
             borderData: FlBorderData(
               show: false,
             ),
@@ -207,11 +196,11 @@ class _TrackInfoState extends State<TrackInfo> {
                   }
                 },
                 touchTooltipData: LineTouchTooltipData(
-                  fitInsideHorizontally: true,
                   showOnTopOfTheChartBoxArea: true,
                   getTooltipColor: (LineBarSpot touchedSpot) => Colors.green,
                   getTooltipItems: (List<LineBarSpot> lineBarsSpot) {
                     LineBarSpot lineBarSpot = lineBarsSpot[0];
+                    double node = lineBarSpot.x;
                     int idx = lineBarSpot.spotIndex;
                     widget.controller.showNode(widget.track!.getNode(idx));
 

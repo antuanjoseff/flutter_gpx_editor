@@ -12,8 +12,8 @@ class Track {
   List<int> xChartLabels = [];
   List<int> elevations = [];
   List<double> speeds = [];
-  double minElevation = double.infinity;
-  double maxElevation = 0;
+  late double minElevation;
+  late double maxElevation;
   int elevationGain = 0;
   int elevationLoss = 0;
   double minSpeed = 0;
@@ -41,6 +41,9 @@ class Track {
     bounds = my.Bounds(LatLng(trackSegment.first.lat!, trackSegment.first.lon!),
         LatLng(trackSegment.first.lat!, trackSegment.first.lon!));
 
+    minElevation = trackSegment[0].ele!;
+    maxElevation = minElevation;
+
     for (var i = 0; i < trackSegment.length; i++) {
       cur = LatLng(trackSegment[i].lat!, trackSegment[i].lon!);
 
@@ -48,12 +51,14 @@ class Track {
         LatLng prev = gpxCoords[gpxCoords.length - 1];
         inc = getDistanceFromLatLonInMeters(cur, prev);
         if (trackSegment[i].time != null && trackSegment[i - 1].time != null) {
-          double sp = 3.6 *
+          double sp = 3600 *
               (inc /
                   (trackSegment[i].time!)
                       .difference(trackSegment[i - 1].time!)
-                      .inSeconds);
-          minSpeed = sp < minSpeed ? sp : minSpeed;
+                      .inMilliseconds);
+          if (sp == double.infinity) {
+            sp = speeds[speeds.length - 1];
+          }
           maxSpeed = sp > maxSpeed ? sp : maxSpeed;
           speeds.add(sp);
         }
