@@ -270,9 +270,31 @@ class _MyMaplibreState extends State<MyMapLibre>
     track!.removeNode(selectedNode);
     await mapController!.removeSymbol(nodeSymbols[symbolIdx]);
     nodeSymbols.removeAt(symbolIdx);
+    // todo increase all manipulatedindexes greatar than just deleted node
+    manipulatedIndexes =
+        updateManipulatedIndexes('delete', selectedNode, manipulatedIndexes);
     redrawNodeSymbols();
     updateTrackLine();
     setState(() {});
+  }
+
+  List<int> updateManipulatedIndexes(
+      String action, int updatedIdx, List<int> indexes) {
+    for (int i = 0; i < indexes.length; i++) {
+      int val = indexes[i];
+      if (val == updatedIdx && action == 'delete') {
+        indexes.removeAt(val);
+      } else {
+        if (updatedIdx < val && action == 'delete') {
+          indexes[i] -= 1;
+        } else {
+          if (action == 'add' && val > updatedIdx) {
+            indexes[i] += 1;
+          }
+        }
+      }
+    }
+    return indexes;
   }
 
   void _tappedOnWpt(Symbol search) async {
@@ -553,6 +575,9 @@ class _MyMaplibreState extends State<MyMapLibre>
       edits.add((position + 1, newWpt, 'add'));
 
       track!.addNode(position, newWpt);
+      manipulatedIndexes.add(position);
+      manipulatedIndexes =
+          updateManipulatedIndexes('add', position, manipulatedIndexes);
 
       updateTrackLine();
       await redrawNodeSymbols();
@@ -631,7 +656,10 @@ class _MyMaplibreState extends State<MyMapLibre>
         dragged.lat = coordinate.latitude;
         dragged.lon = coordinate.longitude;
         track!.setWptAt(selectedNode, dragged);
-        manipulatedIndexes.add(selectedNode);
+
+        if (!manipulatedIndexes.contains(selectedNode)) {
+          manipulatedIndexes.add(selectedNode);
+        }
         updateTrackLine();
         await redrawNodeSymbols();
         setState(() {});
