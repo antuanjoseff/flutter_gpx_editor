@@ -22,6 +22,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:path/path.dart' as p;
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -169,41 +170,42 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<(String, String)> openTextFile(BuildContext context) async {
-    const XTypeGroup typeGroup = XTypeGroup(
-      label: 'xml',
-      // extensions: <String>[],
-    );
-    // This demonstrates using an initial directory for the prompt, which should
-    // only be done in cases where the application can likely predict where the
-    // file would be. In most cases, this parameter should not be provided.
-    final String? initialDirectory =
-        kIsWeb ? null : (await getApplicationDocumentsDirectory()).path;
-    final XFile? file = await openFile(
-      // acceptedTypeGroups: <XTypeGroup>[typeGroup],
-      initialDirectory: initialDirectory,
-    );
-    if (file == null) {
-      // Operation was canceled by the user.
-      return ('', '');
-    }
-    final String fileName = file.name;
-    if (!fileName.toLowerCase().endsWith('.gpx')) {
-      return ('Incorrect format file', '');
-      // await showDialog<void>(
-      //   context: context,
-      //   builder: (BuildContext context) =>
-      //       TextDisplay('INCORRECT FORMAT', 'Chose another file'),
-      // );
-    } else {
-      final String fileContent = await file.readAsString();
+    String filename = '';
+    File? gpxfile;
+    String gpxcontent = '';
 
-      return (fileName, fileContent);
-      // if (context.mounted) {
-      //   await showDialog<void>(
-      //     context: context,
-      //     builder: (BuildContext context) => TextDisplay(fileName, fileContent),
-      //   );
-      // }
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    if (result != null) {
+      if (kIsWeb) {
+        filename = p.basename(result.files.single.name);
+        debugPrint('filename $filename');
+      } else {
+        gpxfile = File(result.files.single.path!);
+        filename = gpxfile.path;
+      }
+
+      if (!filename.toLowerCase().endsWith('.gpx')) {
+        showSnackBar(
+          context,
+          AppLocalizations.of(context)!.incorrectFileFormat,
+        );
+        return ('Incorrect file format', '');
+      } else {
+        if (kIsWeb) {
+          filename = p.basename(result.files.single.name);
+          debugPrint('filename');
+          Uint8List uploadfile = result.files.single.bytes!;
+          gpxcontent = String.fromCharCodes(uploadfile);
+        } else {
+          gpxcontent = await gpxfile!.readAsString();
+        }
+        debugPrint('gpxcontent  $filename');
+        return (filename, gpxcontent);
+      }
+    } else {
+      // User canceled the picker
+      return ('', '');
     }
   }
 
@@ -377,8 +379,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   onPressed: () async {
                     // FilePickerResult? result =
                     //     await FilePicker.platform.pickFiles();
-
                     var (msg, content) = await openTextFile(context);
+
                     if (content == '') {
                       if (msg != '') {
                         TextDisplay(msg, 'Choose a GPX file');
@@ -390,6 +392,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                       try {
                         debugPrint('init');
+                        debugPrint('${content}');
                         gpxOriginal = await GeoXml.fromGpxString(content);
                         debugPrint('end');
                         if (gpxOriginal!.trks[0].trksegs.length >= 1) {

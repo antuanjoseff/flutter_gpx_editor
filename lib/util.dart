@@ -169,19 +169,21 @@ setTimeout(callback, time) {
 void showSnackBar(context, String txt) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Row(
-        children: [
-          Icon(
-            Icons.warning_rounded,
-            color: white,
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-              child: Text(
-            txt,
-            style: TextStyle(color: white),
-          )),
-        ],
+      content: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.warning_rounded,
+              color: white,
+            ),
+            const SizedBox(width: 20),
+            Text(
+              txt,
+              style: TextStyle(color: white),
+            ),
+          ],
+        ),
       ),
       backgroundColor: secondColor,
       duration: const Duration(milliseconds: 3000),

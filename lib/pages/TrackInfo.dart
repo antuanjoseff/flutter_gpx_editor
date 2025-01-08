@@ -52,7 +52,9 @@ class _TrackInfoState extends State<TrackInfo> {
   late double maxY2;
   late double minY;
   late double maxY;
-
+  List<int> elevationValues = [];
+  List<double> speedValues = [];
+  List<int> lengthValues = [];
   @override
   void initState() {
     length = widget.track!.getLength();
@@ -61,19 +63,19 @@ class _TrackInfoState extends State<TrackInfo> {
     elevationGain = widget.track!.getElevationGain();
     elevationLoss = widget.track!.getElevationLoss();
 
-    if (widget.track.getMaxElevation() > widget.track.getMaxSpeed()) {
-      minY2 = widget.track!.getMinSpeed();
-      maxY2 = widget.track!.getMaxSpeed();
-      minY = widget.track!.getMinElevation();
-      maxY = widget.track!.getMaxElevation();
-    } else {
-      minY = widget.track!.getMinSpeed();
-      maxY = widget.track!.getMaxSpeed();
-      minY2 = widget.track!.getMinElevation();
-      maxY2 = widget.track!.getMaxElevation();
-    }
+    // if (widget.track.getMaxElevation() > widget.track.getMaxSpeed()) {
+    minY2 = widget.track!.getMinSpeed();
+    maxY2 = widget.track!.getMaxSpeed();
+    minY = widget.track!.getMinElevation();
+    maxY = widget.track!.getMaxElevation();
 
-    // debugPrint('debug $minY   $maxY   $minY2   $maxY2');
+    // } else {
+    //   minY = widget.track!.getMinSpeed();
+    //   maxY = widget.track!.getMaxSpeed();
+    //   minY2 = widget.track!.getMinElevation();
+    //   maxY2 = widget.track!.getMaxElevation();
+    // }
+
     super.initState();
   }
 
@@ -119,16 +121,16 @@ class _TrackInfoState extends State<TrackInfo> {
 
     List<FlSpot> getSpotsElevation() {
       List<FlSpot> chartLineSpots = [];
-      List<int> xValues = widget.track!.getXChartLabels();
-      List<int> yValues = widget.track!.getElevations();
+      lengthValues = widget.track!.getXChartLabels();
+      elevationValues = widget.track!.getElevations();
       // List<double> y2Values = widget.track!.getSpeeds();
 
       for (int i = 0; i < widget.track!.getCoordsList().length; i++) {
-        double Y2 = yValues[i].toDouble();
+        double Y2 = elevationValues[i].toDouble();
         Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
             ? Y2
             : (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY;
-        chartLineSpots.add(FlSpot(xValues[i].toDouble(), Y2));
+        chartLineSpots.add(FlSpot(lengthValues[i].toDouble(), Y2));
       }
 
       elevationSpots = chartLineSpots;
@@ -137,17 +139,17 @@ class _TrackInfoState extends State<TrackInfo> {
 
     List<FlSpot> getSpotsSpeed() {
       List<FlSpot> chartLineSpots = [];
-      List<int> xValues = widget.track!.getXChartLabels();
-      List<double> yValues = widget.track!.getSpeeds();
+      lengthValues = widget.track!.getXChartLabels();
+      speedValues = widget.track!.getSpeeds();
 
       for (int i = 0; i < widget.track!.getSpeeds().length; i++) {
-        double Y2 = yValues[i].toDouble();
+        double Y2 = speedValues[i].toDouble();
         Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
             ? (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY
             : Y2;
-        chartLineSpots.add(FlSpot(xValues[i].toDouble(), Y2));
+        chartLineSpots.add(FlSpot(lengthValues[i].toDouble(), Y2));
         chartLineSpots.add(FlSpot(
-          xValues[i].toDouble(),
+          lengthValues[i].toDouble(),
           Y2,
         ));
       }
@@ -212,21 +214,27 @@ class _TrackInfoState extends State<TrackInfo> {
                   getTooltipColor: (LineBarSpot touchedSpot) => Colors.green,
                   getTooltipItems: (List<LineBarSpot> lineBarsSpot) {
                     LineBarSpot lineBarSpot = lineBarsSpot[0];
+                    // Data on Y axis (elevation and speed) is concatenated on one array.
+                    // So, spotIndex sometimes is bigger than the data itself
                     int idx = lineBarSpot.spotIndex;
+                    if (idx > elevationSpots.length) {
+                      idx = (idx / 2).floor();
+                    }
+
                     widget.controller.showNode(widget.track!.getNode(idx));
 
-                    double e = elevationSpots[idx].y;
-                    double val = speedSpots[idx].y;
-
-                    double s =
-                        (val - minY) / (maxY - minY) * (maxY2 - minY2) + minY2;
-
+                    int e = elevationValues[idx];
+                    double s = speedValues[idx];
                     String d = formatDistance(lineBarsSpot[0].x);
+                    // double s =
+                    //     (val - minY) / (maxY - minY) * (maxY2 - minY2) + minY2;
+
                     String label =
                         '${e.toStringAsFixed(0)}m\n${s.toStringAsFixed(2)}km/h\n$d';
 
                     return lineBarsSpot.map((lineBarSpot) {
-                      if (lineBarSpot.barIndex == 0) {
+                      // Get data only once
+                      if (lineBarSpot.barIndex == 1) {
                         return LineTooltipItem(
                           '',
                           const TextStyle(

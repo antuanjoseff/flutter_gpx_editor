@@ -36,5 +36,6 @@
   "tooltipoAddIcon": "Add node",
   "tooltipoDeleteIcon": "Delete node",
   "tooltipoAddWaypoint": "Add waypoint",
-  "tooltipoUndo": "undo"
+  "tooltipoUndo": "undo",
+  "incorrectFileFormat": "Incorrect file format"
 }
