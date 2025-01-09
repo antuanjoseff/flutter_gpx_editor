@@ -3,7 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/material.dart';
 
 class Controller {
-  Future<Line?> Function(List<Wpt> lineSegment)? loadTrack;
+  Future<Line?> Function(List<Wpt> lineSegment, List<Wpt> wpts)? loadTrack;
   Future<void> Function()? removeTrackLine;
   Future<List<Symbol>> Function()? addNodeSymbols;
   void Function()? removeNodeSymbols;

@@ -179,7 +179,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if (result != null) {
       if (kIsWeb) {
         filename = p.basename(result.files.single.name);
-        debugPrint('filename $filename');
       } else {
         gpxfile = File(result.files.single.path!);
         filename = gpxfile.path;
@@ -194,13 +193,11 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         if (kIsWeb) {
           filename = p.basename(result.files.single.name);
-          debugPrint('filename');
           Uint8List uploadfile = result.files.single.bytes!;
           gpxcontent = String.fromCharCodes(uploadfile);
         } else {
           gpxcontent = await gpxfile!.readAsString();
         }
-        debugPrint('gpxcontent  $filename');
         return (filename, gpxcontent);
       }
     } else {
@@ -392,7 +389,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
                       try {
                         debugPrint('init');
-                        debugPrint('${content}');
                         gpxOriginal = await GeoXml.fromGpxString(content);
                         debugPrint('end');
                         if (gpxOriginal!.trks[0].trksegs.length >= 1) {
@@ -403,10 +399,11 @@ class _MyHomePageState extends State<MyHomePage> {
                           );
                         }
                         lineSegment = gpxOriginal!.trks[0].trksegs[0].trkpts;
+                        List<Wpt> wpts = gpxOriginal!.wpts;
 
                         // await _controller.removeTrackLine!;
                         editMode = false;
-                        await _controller.loadTrack!(lineSegment);
+                        await _controller.loadTrack!(lineSegment, wpts);
                         _controller.setEditMode!(editMode);
 
                         setState(() {

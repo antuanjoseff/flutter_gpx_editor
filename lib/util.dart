@@ -172,15 +172,18 @@ void showSnackBar(context, String txt) {
       content: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               Icons.warning_rounded,
               color: white,
             ),
-            const SizedBox(width: 20),
-            Text(
-              txt,
-              style: TextStyle(color: white),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                txt,
+                style: TextStyle(color: white),
+              ),
             ),
           ],
         ),

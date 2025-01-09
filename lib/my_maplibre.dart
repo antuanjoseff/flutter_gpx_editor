@@ -223,7 +223,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   void _onMapCreated(MapLibreMapController contrl) async {
     mapController = contrl;
     mapController!.addListener(_onMapChanged);
-    mapController!.onSymbolTapped.add(_onFeatureTapped);
+    mapController!.onSymbolTapped.add(_onSymbolTapped);
     mapController!.onFeatureDrag.add(_onNodeDrag);
     await mapController!.setSymbolIconAllowOverlap(true);
     // if (!kIsWeb) {
@@ -268,17 +268,6 @@ class _MyMaplibreState extends State<MyMapLibre>
         disableMapChanged = false;
       });
     }
-
-    // await mapController!.setSymbolIconAllowOverlap(true);
-    // if (zoom == 18) {
-    //   prevZoom = 18;
-    //   await mapController!.setSymbolIconAllowOverlap(true);
-    // } else {
-    //   if (prevZoom == 18) {
-    //     await mapController!.setSymbolIconAllowOverlap(false);
-    //     prevZoom = zoom;
-    //   }
-    // }
   }
 
   bool isMoveNodeActive() {
@@ -293,16 +282,17 @@ class _MyMaplibreState extends State<MyMapLibre>
     return editTools['addWayPoint']!;
   }
 
-  void _onFeatureTapped(Symbol symbol) async {
-    // Only when these tools are activated
-    if (!isDeleteActive() && !isAddWayPointActive()) {
+  void _onSymbolTapped(Symbol symbol) async {
+    var (type, idx) = await searchSymbol(symbol.id);
+
+    if (type == 'waypoint') {
+      // then user tapped on a wpt
+      tappedOnWpt(symbol, idx);
       return;
     }
-    var (symbolIdx, nodeIdx) = await searchSymbol(symbol.id);
-    selectedNode = nodeIdx;
-    if (selectedNode == -1) {
-      // then user tapped on a wpt
-      _tappedOnWpt(symbol);
+
+    // Only when these tools are activated
+    if (!isDeleteActive() && !isAddWayPointActive()) {
       return;
     }
 
@@ -310,8 +300,8 @@ class _MyMaplibreState extends State<MyMapLibre>
         (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
 
     track!.removeNode(selectedNode);
-    await mapController!.removeSymbol(nodeSymbols[symbolIdx]);
-    nodeSymbols.removeAt(symbolIdx);
+    await mapController!.removeSymbol(nodeSymbols[idx]);
+    nodeSymbols.removeAt(idx);
     // todo increase all manipulatedindexes greatar than just deleted node
     manipulatedIndexes =
         updateManipulatedIndexes('delete', selectedNode, manipulatedIndexes);
@@ -339,13 +329,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     return indexes;
   }
 
-  void _tappedOnWpt(Symbol search) async {
-    int idx = -1;
-    for (var i = 0; idx == -1 && i < mapWayPoints.length; i++) {
-      if (search.id == mapWayPoints[i].extensions['id']) {
-        idx = i;
-      }
-    }
+  void tappedOnWpt(Symbol search, int idx) async {
     if (idx != -1) {
       var (action, wptName) = await openDialogEditWpt(mapWayPoints[idx]);
       if (action == 'edit' && wptName != mapWayPoints[idx].name) {
@@ -361,14 +345,6 @@ class _MyMaplibreState extends State<MyMapLibre>
         }
       }
     }
-
-    // edits.add(
-    //     (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
-
-    // track!.removeNode(selectedNode);
-
-    // await mapController!.removeSymbol(nodeSymbols[selectedNode]);
-    // nodeSymbols.removeAt(selectedNode);
 
     setState(() {});
   }
@@ -671,11 +647,10 @@ class _MyMaplibreState extends State<MyMapLibre>
 
     switch (eventType) {
       case DragEventType.start:
-        var (symbolIdx, nodeIdx) = await searchSymbol(id);
-        selectedNode = nodeIdx;
+        var (type, idx) = await searchSymbol(id);
 
-        if (selectedNode == -1) return;
-        selectedSymbol = nodeSymbols[symbolIdx];
+        if (type != 'node') return;
+        selectedSymbol = nodeSymbols[idx];
 
         break;
       case DragEventType.drag:
@@ -788,9 +763,18 @@ class _MyMaplibreState extends State<MyMapLibre>
     setState(() {});
   }
 
-  Future<(int, int)> searchSymbol(String search) async {
+  // Returns the symbol type(waypoint/node) and the index in the symbols array
+  Future<(String, int)> searchSymbol(String search) async {
     late LatLng geom;
 
+    int idx = -1;
+    for (var i = 0; idx == -1 && i < wptSymbols.length; i++) {
+      if (search == wptSymbols[i].id) {
+        idx = i;
+        return ('waypoint', idx);
+      }
+    }
+    //IF not found, then search in nodeSymbols
     for (var i = 0; i < nodeSymbols.length; i++) {
       if (nodeSymbols[i].id == search) {
         geom = LatLng(nodeSymbols[i].options.geometry!.latitude,
@@ -803,12 +787,12 @@ class _MyMaplibreState extends State<MyMapLibre>
           coord = coords[y];
           if (coord.latitude == geom.latitude &&
               coord.longitude == geom.longitude) {
-            return (i, y);
+            return ('node', y);
           }
         }
       }
     }
-    return (-1, -1);
+    return ('', -1);
   }
 
   void _updateSelectedSymbol(Symbol symbol, SymbolOptions changes) async {
@@ -927,7 +911,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     if (mapController!.onFeatureDrag.isNotEmpty) {
       mapController!.onFeatureDrag.remove(_onNodeDrag);
     }
-    mapController?.onSymbolTapped.remove(_onFeatureTapped);
+    mapController?.onSymbolTapped.remove(_onSymbolTapped);
     mapController!.onFeatureDrag.remove(_onNodeDrag);
     super.dispose();
   }
@@ -938,7 +922,8 @@ class _MyMaplibreState extends State<MyMapLibre>
     await mapController!.updateLine(trackLine!, changes);
   }
 
-  Future<Line?> loadTrack(List<Wpt> trackSegment) async {
+  Future<Line?> loadTrack(
+      List<Wpt> trackSegment, List<Wpt> gpxWaypoints) async {
     deactivateTools();
     showTools = false;
 
@@ -982,6 +967,19 @@ class _MyMaplibreState extends State<MyMapLibre>
         lineOpacity: 0.9,
       ),
     );
+
+    // Add track waypoints to map
+    for (int i = 0; i < gpxWaypoints.length; i++) {
+      Wpt newWpt = gpxWaypoints[i];
+      mapWayPoints.add(newWpt);
+      track!.addWpt(newWpt);
+      Symbol wptSymbol = await mapController!.addSymbol(SymbolOptions(
+          draggable: false,
+          iconImage: 'waypoint',
+          geometry: LatLng(newWpt.lat!, newWpt.lon!)));
+
+      wptSymbols.add(wptSymbol);
+    }
 
     setState(() {
       trackLoaded = true;
@@ -1566,64 +1564,73 @@ class _MyMaplibreState extends State<MyMapLibre>
             )
           ]),
         ),
-        AnimatedPositioned(
-            duration: Duration(milliseconds: 400),
+
+        if (infoMode) ...[
+          AnimatedPositioned(
+              duration: Duration(milliseconds: 500),
+              bottom: showBottomPanel && showChart
+                  ? kIsWeb
+                      ? (height / 3)
+                      : (height / 3) + 16
+                  : (showBottomPanel && !showChart)
+                      ? kIsWeb
+                          ? 65
+                          : 50
+                      : -(height / 2),
+              left: 0,
+              child: GestureDetector(
+                onTap: () async {
+                  showChart = !showChart;
+                  arrowRotation += 1 / 2;
+                  if (!showChart && shownode != null) {
+                    await mapController!.removeSymbol(shownode!);
+                    shownode = null;
+                  }
+                  setState(() {});
+                },
+                child: Container(
+                  color: white.withOpacity(0.7),
+                  width: width,
+                  child: AnimatedRotation(
+                      duration: Duration(milliseconds: 500),
+                      turns: arrowRotation,
+                      child: Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: Icon(Icons.arrow_drop_down,
+                            size: 20, color: primaryColor),
+                      )),
+                ),
+              )),
+          AnimatedPositioned(
+            duration: Duration(milliseconds: 500),
             bottom: showBottomPanel && showChart
-                ? (height / 5) + 97
-                : (showBottomPanel && !showChart)
-                    ? 52
+                ? 0
+                : (!showChart)
+                    ? -((height / 5) + 45)
                     : -(height / 2),
             left: 0,
-            child: GestureDetector(
-              onTap: () async {
-                showChart = !showChart;
-                arrowRotation += 1 / 2;
-                if (!showChart && shownode != null) {
-                  await mapController!.removeSymbol(shownode!);
-                  shownode = null;
-                }
-                setState(() {});
-              },
-              child: Container(
-                color: white.withOpacity(0.7),
-                width: width,
-                child: AnimatedRotation(
-                    duration: Duration(milliseconds: 500),
-                    turns: arrowRotation,
-                    child: Padding(
-                      padding: const EdgeInsets.all(0.0),
-                      child: Icon(Icons.arrow_drop_down,
-                          size: 20, color: primaryColor),
-                    )),
-              ),
-            )),
-        AnimatedPositioned(
-          duration: Duration(milliseconds: 400),
-          bottom: showBottomPanel ? 0 : -(height / 2),
-          left: 0,
-          child: queryTrack != null
-              ? Container(
-                  color: Colors.white.withOpacity(0.9),
-                  height: showChart
-                      ? kIsWeb
-                          ? height / 3
-                          : (height / 3) + 17
-                      : null,
-                  width: width,
-                  child: Column(
-                    children: [
-                      Container(
-                        color: secondColor,
-                        child: DefaultTextStyle(
-                          style: TextStyle(
-                              color: white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: kIsWeb ? 18 : 10),
-                          child: Padding(
-                            padding: const EdgeInsets.all(5),
-                            // padding: const EdgeInsets.all(kIsWeb ? 8.0 : 4),
-                            child: SizedBox(
-                              height: kIsWeb ? 65 : 42,
+            child: queryTrack != null
+                ? Container(
+                    color: Colors.white.withOpacity(0.9),
+                    height: showChart
+                        ? kIsWeb
+                            ? height / 3
+                            : (height / 3) + 17
+                        : null,
+                    width: width,
+                    child: Column(
+                      children: [
+                        Container(
+                          color: secondColor,
+                          height: kIsWeb ? 65 : 50,
+                          child: DefaultTextStyle(
+                            style: TextStyle(
+                                color: white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: kIsWeb ? 18 : 10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              // padding: const EdgeInsets.all(kIsWeb ? 8.0 : 4),
                               child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceAround,
@@ -1646,7 +1653,8 @@ class _MyMaplibreState extends State<MyMapLibre>
                                               MainAxisAlignment.center,
                                           children: [
                                             Icon(Icons.directions_walk_rounded,
-                                                color: white),
+                                                color: white,
+                                                size: kIsWeb ? 25 : 20),
                                             SizedBox(height: 5),
                                             Text(formatDistance(
                                                 queryTrack!.getLength())),
@@ -1673,7 +1681,8 @@ class _MyMaplibreState extends State<MyMapLibre>
                                               MainAxisAlignment.center,
                                           children: [
                                             Icon(Icons.hourglass_bottom_rounded,
-                                                color: white),
+                                                color: white,
+                                                size: kIsWeb ? 25 : 20),
                                             SizedBox(height: 5),
                                             Text(
                                                 '${formatDuration(queryTrack!.getDuration())}')
@@ -1699,7 +1708,9 @@ class _MyMaplibreState extends State<MyMapLibre>
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.speed, color: white),
+                                            Icon(Icons.speed,
+                                                color: white,
+                                                size: kIsWeb ? 25 : 20),
                                             SizedBox(height: 5),
                                             Text(
                                                 '${(queryTrack!.getLength() / queryTrack!.getDuration().inSeconds * 3.6).toStringAsFixed(2)}km/h'),
@@ -1725,7 +1736,8 @@ class _MyMaplibreState extends State<MyMapLibre>
                                               MainAxisAlignment.center,
                                           children: [
                                             Icon(Icons.change_history_rounded,
-                                                color: white),
+                                                color: white,
+                                                size: kIsWeb ? 25 : 20),
                                             SizedBox(height: 5),
                                             Text(
                                                 '${queryTrack!.getElevationGain()}m'),
@@ -1744,7 +1756,8 @@ class _MyMaplibreState extends State<MyMapLibre>
                                               angle: math.pi,
                                               child: Icon(
                                                   Icons.change_history_rounded,
-                                                  color: white)),
+                                                  color: white,
+                                                  size: kIsWeb ? 25 : 20)),
                                           SizedBox(height: 5),
                                           Text(
                                               '${queryTrack!.getElevationLoss()}m'),
@@ -1757,24 +1770,19 @@ class _MyMaplibreState extends State<MyMapLibre>
                             ),
                           ),
                         ),
-                      ),
-                      ...[
-                        showChart
-                            ? Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 10, right: 10),
-                                child: TrackInfo(
-                                    controller: widget.controller,
-                                    track: queryTrack,
-                                    width: width,
-                                    height: (height / 5) + 40),
-                              )
-                            : Container()
-                      ]
-                    ],
-                  ))
-              : Container(),
-        )
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10, right: 10),
+                          child: TrackInfo(
+                              controller: widget.controller,
+                              track: queryTrack,
+                              width: width,
+                              height: (height / 5) + 40),
+                        )
+                      ],
+                    ))
+                : Container(),
+          )
+        ]
       ]);
     });
   }

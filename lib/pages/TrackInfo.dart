@@ -127,9 +127,9 @@ class _TrackInfoState extends State<TrackInfo> {
 
       for (int i = 0; i < widget.track!.getCoordsList().length; i++) {
         double Y2 = elevationValues[i].toDouble();
-        Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
-            ? Y2
-            : (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY;
+        // Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
+        //     ? Y2
+        //     : (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY;
         chartLineSpots.add(FlSpot(lengthValues[i].toDouble(), Y2));
       }
 
@@ -143,14 +143,16 @@ class _TrackInfoState extends State<TrackInfo> {
       speedValues = widget.track!.getSpeeds();
 
       for (int i = 0; i < widget.track!.getSpeeds().length; i++) {
-        double Y2 = speedValues[i].toDouble();
-        Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
-            ? (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY
-            : Y2;
-        chartLineSpots.add(FlSpot(lengthValues[i].toDouble(), Y2));
+        double current = speedValues[i].toDouble();
+        current = (current / maxY2) * (maxY - minY) + minY;
+
+        // Y2 = widget.track.getMaxElevation() > widget.track.getMaxSpeed()
+        //     ? (Y2 - minY2) / (maxY2 - minY2) * (maxY - minY) + minY
+        //     : Y2;
+        chartLineSpots.add(FlSpot(lengthValues[i].toDouble(), current));
         chartLineSpots.add(FlSpot(
           lengthValues[i].toDouble(),
-          Y2,
+          current,
         ));
       }
       speedSpots = chartLineSpots;
@@ -166,9 +168,7 @@ class _TrackInfoState extends State<TrackInfo> {
             minX: 0,
             maxX: widget.track!.getLength(),
             minY: 0,
-            maxY: widget.track.getMaxElevation() > widget.track.getMaxSpeed()
-                ? widget.track.getMaxElevation()
-                : widget.track.getMaxSpeed(),
+            maxY: widget.track.getMaxElevation(),
             borderData: FlBorderData(
               show: false,
             ),
@@ -251,27 +251,6 @@ class _TrackInfoState extends State<TrackInfo> {
                             )
                           ],
                         );
-                      } else {
-                        // double value = (lineBarSpot.y - minY) /
-                        //         (maxY - minY) *
-                        //         (maxY2 - minY2) +
-                        //     minY2;
-                        // return LineTooltipItem(
-                        //   'speed',
-                        //   const TextStyle(
-                        //     color: Colors.white,
-                        //     fontWeight: FontWeight.bold,
-                        //   ),
-                        //   children: [
-                        //     TextSpan(
-                        //       text: '${value.toStringAsFixed(2)} km/h',
-                        //       style: const TextStyle(
-                        //         color: Colors.white,
-                        //         fontWeight: FontWeight.w900,
-                        //       ),
-                        //     )
-                        //   ],
-                        // );
                       }
                     }).toList();
                   },
@@ -307,7 +286,7 @@ class _TrackInfoState extends State<TrackInfo> {
                   spots: getSpotsSpeed(),
                   color: Colors.green,
                   barWidth: 2,
-                  isCurved: true,
+                  isCurved: false,
                   dotData: const FlDotData(
                     show: false,
                   )),
@@ -315,7 +294,7 @@ class _TrackInfoState extends State<TrackInfo> {
                 spots: getSpotsElevation(),
                 color: primaryColor,
                 barWidth: 2,
-                isCurved: true,
+                isCurved: false,
                 dotData: const FlDotData(
                   show: false,
                 ),
