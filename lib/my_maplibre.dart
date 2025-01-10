@@ -260,7 +260,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     if (disableMapChanged) return;
     int zoom = mapController!.cameraPosition!.zoom.floor();
 
-    if (isAnyNodesToolActive() && kIsWeb) {
+    if (isAnyNodesToolActive()) {
       // after last map changed, wait 300ms and redraw nodes
       deb.debounce(() async {
         disableMapChanged = true;
@@ -283,11 +283,11 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   void _onSymbolTapped(Symbol symbol) async {
-    var (type, idx) = await searchSymbol(symbol.id);
+    var (type, nodeAndSymbolPosition) = await searchSymbol(symbol.id);
 
     if (type == 'waypoint') {
       // then user tapped on a wpt
-      tappedOnWpt(symbol, idx);
+      tappedOnWpt(symbol, nodeAndSymbolPosition['symbol']!);
       return;
     }
 
@@ -300,8 +300,10 @@ class _MyMaplibreState extends State<MyMapLibre>
         (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
 
     track!.removeNode(selectedNode);
-    await mapController!.removeSymbol(nodeSymbols[idx]);
-    nodeSymbols.removeAt(idx);
+    await mapController!
+        .removeSymbol(nodeSymbols[nodeAndSymbolPosition['symbol']!]);
+    nodeSymbols.removeAt(nodeAndSymbolPosition['node']!);
+
     // todo increase all manipulatedindexes greatar than just deleted node
     manipulatedIndexes =
         updateManipulatedIndexes('delete', selectedNode, manipulatedIndexes);
@@ -647,10 +649,12 @@ class _MyMaplibreState extends State<MyMapLibre>
 
     switch (eventType) {
       case DragEventType.start:
-        var (type, idx) = await searchSymbol(id);
+        var (type, nodeAndSymbolPosition) = await searchSymbol(id);
 
+        selectedNode = nodeAndSymbolPosition['node']!;
         if (type != 'node') return;
-        selectedSymbol = nodeSymbols[idx];
+
+        selectedSymbol = nodeSymbols[nodeAndSymbolPosition['symbol']!];
 
         break;
       case DragEventType.drag:
@@ -763,18 +767,22 @@ class _MyMaplibreState extends State<MyMapLibre>
     setState(() {});
   }
 
-  // Returns the symbol type(waypoint/node) and the index in the symbols array
-  Future<(String, int)> searchSymbol(String search) async {
+  // Returns the symbol type (waypoint symbol or node symbol)
+  // and the symbold idx position among symbols
+  // if the found symbol is a node symbol, then also returns
+  // the idx position of the track coordinate associated to the symbol
+
+  Future<(String, Map<String, int>)> searchSymbol(String search) async {
     late LatLng geom;
 
     int idx = -1;
     for (var i = 0; idx == -1 && i < wptSymbols.length; i++) {
       if (search == wptSymbols[i].id) {
         idx = i;
-        return ('waypoint', idx);
+        return ('waypoint', {'waypoint': idx, 'node': -1});
       }
     }
-    //IF not found, then search in nodeSymbols
+    //If not found, then search in nodeSymbols
     for (var i = 0; i < nodeSymbols.length; i++) {
       if (nodeSymbols[i].id == search) {
         geom = LatLng(nodeSymbols[i].options.geometry!.latitude,
@@ -787,12 +795,12 @@ class _MyMaplibreState extends State<MyMapLibre>
           coord = coords[y];
           if (coord.latitude == geom.latitude &&
               coord.longitude == geom.longitude) {
-            return ('node', y);
+            return ('node', {'node': y, 'symbol': i});
           }
         }
       }
     }
-    return ('', -1);
+    return ('', {'node': -1, 'symbol': -1});
   }
 
   void _updateSelectedSymbol(Symbol symbol, SymbolOptions changes) async {
@@ -832,23 +840,18 @@ class _MyMaplibreState extends State<MyMapLibre>
   Future<List<SymbolOptions>> makeSymbolOptions(List<LatLng> nodes) async {
     String image = getNodesImage(editTools);
     bool draggable = editTools['move']! ? true : false;
-// var used to calculate number of pixels between track nodes
+
+    // var used to calculate number of pixels between track nodes
     int symbolsPadding = 0;
 
-    if (kIsWeb) {
-      if (mapController!.cameraPosition!.zoom.floor() >= 17) {
-        symbolsPadding = 1;
-      } else {
-        double resolution = await mapController!.getMetersPerPixelAtLatitude(
-            mapController!.cameraPosition!.target.latitude);
-
-        symbolsPadding = ((40 * resolution) / nodesRatio).floor();
-      }
-    } else {
-      symbolsPadding = 1; // show all
-    }
-    if (mapController!.cameraPosition!.zoom.floor() == 18) {
+    // if (kIsWeb) {
+    if (mapController!.cameraPosition!.zoom.floor() > 17) {
       symbolsPadding = 1;
+    } else {
+      double resolution = await mapController!.getMetersPerPixelAtLatitude(
+          mapController!.cameraPosition!.target.latitude);
+
+      symbolsPadding = ((40 * resolution) / nodesRatio).floor();
     }
 
     final symbolOptions = <SymbolOptions>[];
@@ -1236,7 +1239,7 @@ class _MyMaplibreState extends State<MyMapLibre>
     return LayoutBuilder(builder: (context, constraints) {
       return Stack(children: [
         MapLibreMap(
-            minMaxZoomPreference: MinMaxZoomPreference(0, 18),
+            minMaxZoomPreference: MinMaxZoomPreference(0, 20),
             compassEnabled: false,
             trackCameraPosition: true,
             onMapCreated: _onMapCreated,
