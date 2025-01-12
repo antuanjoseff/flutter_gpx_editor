@@ -100,6 +100,8 @@ class _MyMaplibreState extends State<MyMapLibre>
   List<Symbol> nodeSymbols =
       []; //Symbols on map to allow dragging the existing NODES of the gpx track
   List<Symbol> manipulatedSymbols = [];
+  Map<String, Symbol> dictSymbols = {};
+  Map<String, Symbol> dictManipulatedSymbols = {};
   List<int> manipulatedIndexes =
       []; //indexes of nodes in track coordinates that have been manipulated.
 
@@ -871,6 +873,7 @@ class _MyMaplibreState extends State<MyMapLibre>
           draggable: draggable,
           iconImage: image,
           geometry: coord,
+          zIndex: idx,
           textAnchor: idx.toString()));
     }
 
@@ -882,12 +885,19 @@ class _MyMaplibreState extends State<MyMapLibre>
     nodeSymbols =
         await mapController!.addSymbols(await makeSymbolOptions(coords));
 
+    for (int i = 0; i < nodeSymbols.length; i++) {
+      dictSymbols[nodeSymbols[i].id] = nodeSymbols[i];
+    }
     List<LatLng> manipulatedCoords = [
       for (var idx in manipulatedIndexes) coords[idx]
     ];
 
     manipulatedSymbols = await mapController!
         .addSymbols(await makeSymbolOptions(manipulatedCoords));
+
+    for (int i = 0; i < manipulatedSymbols.length; i++) {
+      dictManipulatedSymbols[manipulatedSymbols[i].id] = manipulatedSymbols[i];
+    }
 
     return [...nodeSymbols, ...manipulatedSymbols];
   }
