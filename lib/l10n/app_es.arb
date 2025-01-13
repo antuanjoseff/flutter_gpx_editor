@@ -29,10 +29,12 @@
     "tooltipSaveFile": "Guardar archivo",
     "tooltipEditTrack": "Editar",
     "baseLayers": "Capas",
-    "tooltipoMoveIcon": "Mover nodo",
+    "tooltipMoveIcon": "Mover nodo",
     "tooltipoAddIcon": "Añadir nodo",
     "tooltipoDeleteIcon": "Eliminar nodo",
     "tooltipoAddWaypoint": "Añadir waypoint",
     "tooltipoUndo": "deshacer",
-    "incorrectFileFormat": "Formato de archivo incorrecto"
+    "incorrectFileFormat": "Formato de archivo incorrecto",
+    "addNodeConfirm": "¿Añadir nodo en esta posición?",
+    "zoomInToEdit": "Haz zoom in para editar"
 }

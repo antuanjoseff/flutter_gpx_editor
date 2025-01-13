@@ -32,10 +32,12 @@
   "tooltipSaveFile": "Save file",
   "tooltipEditTrack": "Edit",
   "baseLayers": "Layers",
-  "tooltipoMoveIcon": "Move nodes",
+  "tooltipMoveIcon": "Move nodes",
   "tooltipoAddIcon": "Add node",
   "tooltipoDeleteIcon": "Delete node",
   "tooltipoAddWaypoint": "Add waypoint",
   "tooltipoUndo": "undo",
-  "incorrectFileFormat": "Incorrect file format"
+  "incorrectFileFormat": "Incorrect file format",
+  "addNodeConfirm": "Add a new node in this location?",
+  "zoomInToEdit": "Zoom in to edit"
 }

@@ -74,7 +74,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   // INFO TRACK VARIABLES
   int startSegmentPoint = -1;
   int endSegmentPoint = -1;
-  double editZoom = 15;
+
   double trackWidth = 4;
   Color trackColor = primaryColor; // Selects a mid-range green.
   Color defaultColorIcon1 = inactiveColor; // Selects a mid-range green.
@@ -142,7 +142,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   late double maxY;
 
   final thr = Throttling<void>(duration: const Duration(milliseconds: 100));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 100));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 500));
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
@@ -179,10 +179,10 @@ class _MyMaplibreState extends State<MyMapLibre>
     super.initState();
   }
 
-  void deactivateTools() {
+  void deactivateTools() async {
     for (String tool in editTools.keys) {
       editTools[tool] = false;
-      removeNodeSymbols();
+      await removeNodeSymbols();
     }
   }
 
@@ -240,11 +240,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   double getZoom() {
-    if (mapController != null) {
-      return mapController!.cameraPosition!.zoom;
-    } else {
-      return 0;
-    }
+    return mapController!.cameraPosition!.zoom;
   }
 
   void showNode(location) async {
@@ -265,14 +261,13 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   void _onMapChanged() async {
-    if (disableMapChanged) {
-      return;
-    }
+    if (disableMapChanged) return;
+
     if (editTools['add']!) {
-      if (bottomSheetController != null) {
-        bottomSheetController?.close();
-      }
+      bottomSheetController?.close();
     }
+
+    int zoom = mapController!.cameraPosition!.zoom.floor();
 
     if (isAnyNodesToolActive()) {
       // after last map changed, wait 300ms and redraw nodes
@@ -282,7 +277,6 @@ class _MyMaplibreState extends State<MyMapLibre>
         disableMapChanged = false;
       });
     }
-    setState(() {});
   }
 
   bool isMoveNodeActive() {
@@ -311,23 +305,19 @@ class _MyMaplibreState extends State<MyMapLibre>
       return;
     }
 
-    selectedNode = nodeAndSymbolPosition['node']!;
-
     edits.add(
         (selectedNode, cloneWpt(track!.trackSegment[selectedNode]), 'delete'));
 
     track!.removeNode(selectedNode);
-    updateTrackLine();
-
     await mapController!
         .removeSymbol(nodeSymbols[nodeAndSymbolPosition['symbol']!]);
-    nodeSymbols.removeAt(nodeAndSymbolPosition['symbol']!);
+    nodeSymbols.removeAt(nodeAndSymbolPosition['node']!);
 
     // todo increase all manipulatedindexes greatar than just deleted node
     manipulatedIndexes =
         updateManipulatedIndexes('delete', selectedNode, manipulatedIndexes);
     redrawNodeSymbols();
-
+    updateTrackLine();
     setState(() {});
   }
 
@@ -600,13 +590,12 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   Future<bool> addNode(distance, nodeIdx, candidate) async {
     // var (dist, nodeIdx, P) = track!.getCandidateNode(candidate);
-    debugPrint('nodeIdx $nodeIdx');
+    debugPrint('distance $distance');
     if (distance < 50) {
       Symbol added = await mapController!.addSymbol(SymbolOptions(
           draggable: false, iconImage: 'node-plain', geometry: candidate));
 
-      nodeSymbols.add(added);
-      // nodeSymbols.insert(nodeIdx + 1, added);
+      nodeSymbols.insert(nodeIdx + 1, added);
 
       Wpt newWpt = cloneWpt(halfSegmentWpt(
           track!.trackSegment[nodeIdx], track!.trackSegment[nodeIdx + 1]));
@@ -615,14 +604,13 @@ class _MyMaplibreState extends State<MyMapLibre>
       edits.add((nodeIdx + 1, newWpt, 'add'));
 
       track!.addNode(nodeIdx, newWpt);
-      updateTrackLine();
-
       manipulatedIndexes.add(nodeIdx);
       manipulatedIndexes =
           updateManipulatedIndexes('add', nodeIdx, manipulatedIndexes);
 
-      // await redrawNodeSymbols();
-      // setState(() {});
+      updateTrackLine();
+      await redrawNodeSymbols();
+
       return true;
     } else {
       // Show snackbar message
@@ -798,15 +786,14 @@ class _MyMaplibreState extends State<MyMapLibre>
   Future<(String, Map<String, int>)> searchSymbol(String search) async {
     late LatLng geom;
 
-    int idxSymbol = -1;
-    for (var i = 0; idxSymbol == -1 && i < wptSymbols.length; i++) {
+    int idx = -1;
+    for (var i = 0; idx == -1 && i < wptSymbols.length; i++) {
       if (search == wptSymbols[i].id) {
-        idxSymbol = i;
-        return ('waypoint', {'symbol': idxSymbol, 'node': -1});
+        idx = i;
+        return ('waypoint', {'waypoint': idx, 'node': -1});
       }
     }
     //If not found, then search in nodeSymbols
-
     for (var i = 0; i < nodeSymbols.length; i++) {
       if (nodeSymbols[i].id == search) {
         geom = LatLng(nodeSymbols[i].options.geometry!.latitude,
@@ -858,13 +845,30 @@ class _MyMaplibreState extends State<MyMapLibre>
     String image = getNodesImage(editTools);
     bool draggable = editTools['move']! ? true : false;
 
+    // var used to calculate number of pixels between track nodes
+    int symbolsPadding = 0;
+
+    // if (kIsWeb) {
+    if (mapController!.cameraPosition!.zoom.floor() > 17) {
+      symbolsPadding = 1;
+    } else {
+      double resolution = await mapController!.getMetersPerPixelAtLatitude(
+          mapController!.cameraPosition!.target.latitude);
+
+      symbolsPadding = ((40 * resolution) / nodesRatio).floor();
+    }
+
     final symbolOptions = <SymbolOptions>[];
     for (var idx = 0; idx < nodes.length; idx++) {
       LatLng coord = nodes[idx];
 
-      if (!await coordInMapControllerView(coord, mapController)) {
+      if (idx % symbolsPadding != 0 && !nodeInManipulatedIndexes(idx)) {
         continue;
       }
+
+      // if (!await coordInMapControllerView(coord, mapController)) {
+      //   continue;
+      // }
 
       symbolOptions.add(SymbolOptions(
           draggable: draggable,
@@ -878,10 +882,6 @@ class _MyMaplibreState extends State<MyMapLibre>
   }
 
   Future<List<Symbol>> addNodeSymbols() async {
-    if (getZoom() < editZoom) {
-      return [];
-    }
-
     List<LatLng> coords = track!.getCoordsList();
     nodeSymbols =
         await mapController!.addSymbols(await makeSymbolOptions(coords));
@@ -1008,7 +1008,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         editMode = false;
       }
     }
-    removeNodeSymbols();
+    await removeNodeSymbols();
     editMode = false;
 
     nodeSymbols = [];
@@ -1307,30 +1307,15 @@ class _MyMaplibreState extends State<MyMapLibre>
             onTap: () async {
               // pan map to closest node and show dialog box
               LatLng center = mapController!.cameraPosition!.target;
+              var (distance, nodeIdx, candidate) =
+                  track!.getCandidateNode(center);
 
-              var (distance, nodeIdx, P) = track!.getCandidateNode(center);
-              if (distance > 50) {
-                snackbar(
-                    context,
-                    Icon(Icons.warning),
-                    secondColor,
-                    Text(
-                      AppLocalizations.of(context)!.nodeToAddIsTooFar,
-                      style: TextStyle(color: white),
-                    ),
-                    Duration(seconds: 2));
-                return;
-              }
-              disableMapChanged = true;
               await mapController!
                   .animateCamera(
-                CameraUpdate.newLatLng(P),
+                CameraUpdate.newLatLng(candidate),
                 duration: const Duration(milliseconds: 0),
               )
-                  .then((_) {
-                Timer(Duration(milliseconds: 100), () {
-                  disableMapChanged = false;
-                });
+                  .then((_) async {
                 bottomSheetController = showBottomSheet(
                     context: context,
                     builder: (BuildContext context) {
@@ -1359,13 +1344,12 @@ class _MyMaplibreState extends State<MyMapLibre>
                                   ElevatedButton(
                                     child: Text(
                                         AppLocalizations.of(context)!.apply),
-                                    onPressed: () {
-                                      addNode(distance, nodeIdx, P)
-                                          .then((status) {
-                                        // if (status) {
-                                        //   Navigator.pop(context);
-                                        // }
-                                      });
+                                    onPressed: () async {
+                                      bool status = await addNode(
+                                          distance, nodeIdx, candidate);
+                                      if (status) {
+                                        Navigator.pop(context);
+                                      }
                                     },
                                   ),
                                 ],
@@ -1462,7 +1446,7 @@ class _MyMaplibreState extends State<MyMapLibre>
               trackLoaded
                   ? CircleAvatar(
                       radius: 27,
-                      backgroundColor: infoMode || (getZoom() <= editZoom)
+                      backgroundColor: infoMode
                           ? thirthcolor
                           : editMode
                               ? thirthcolor
@@ -1470,21 +1454,18 @@ class _MyMaplibreState extends State<MyMapLibre>
                       child: CircleAvatar(
                         radius: 25,
                         // backgroundColor: !editMode ? Colors.white : thirthcolor,
-                        backgroundColor: infoMode || (getZoom() <= editZoom)
+                        backgroundColor: infoMode
                             ? thirthcolor
                             : (editMode ? thirthcolor : white),
                         child: IconButton(
                           icon: Icon(Icons.edit,
-                              color: (infoMode ||
-                                      editMode ||
-                                      getZoom() <= editZoom)
+                              color: (infoMode || editMode)
                                   ? white
                                   : primaryColor),
-                          tooltip: (getZoom() > editZoom)
-                              ? AppLocalizations.of(context)!.tooltipEditTrack
-                              : AppLocalizations.of(context)!.zoomInToEdit,
+                          tooltip:
+                              AppLocalizations.of(context)!.tooltipEditTrack,
                           onPressed: () async {
-                            if (infoMode || getZoom() < editZoom) return;
+                            if (infoMode) return;
                             editMode = !editMode;
                             infoMode = false;
                             if (!editMode) {
@@ -1511,9 +1492,7 @@ class _MyMaplibreState extends State<MyMapLibre>
                     backgroundColor:
                         editTools['move']! ? backgroundActive : white,
                     child: IconButton(
-                      tooltip: (getZoom() > editZoom)
-                          ? AppLocalizations.of(context)!.tooltipMoveIcon
-                          : AppLocalizations.of(context)!.zoomInToEdit,
+                      tooltip: AppLocalizations.of(context)!.tooltipMoveIcon,
                       icon: MoveIcon(
                         color: editTools['move']! ? white : primaryColor,
                         size: editMode ? 35 : 0,
@@ -1545,9 +1524,7 @@ class _MyMaplibreState extends State<MyMapLibre>
                     backgroundColor:
                         editTools['add']! ? backgroundActive : white,
                     child: IconButton(
-                      tooltip: (getZoom() > editZoom)
-                          ? AppLocalizations.of(context)!.tooltipoAddIcon
-                          : AppLocalizations.of(context)!.zoomInToEdit,
+                      tooltip: AppLocalizations.of(context)!.tooltipoAddIcon,
                       icon: AddIcon(
                         color: editTools['add']! ? white : primaryColor,
                         size: editMode ? 35 : 0,
@@ -1580,9 +1557,7 @@ class _MyMaplibreState extends State<MyMapLibre>
                     backgroundColor:
                         editTools['delete']! ? backgroundActive : Colors.white,
                     child: IconButton(
-                      tooltip: (getZoom() > editZoom)
-                          ? AppLocalizations.of(context)!.tooltipoDeleteIcon
-                          : AppLocalizations.of(context)!.zoomInToEdit,
+                      tooltip: AppLocalizations.of(context)!.tooltipoDeleteIcon,
                       icon: DeleteIcon(
                         color: editTools['delete']! ? white : primaryColor,
                         size: editMode ? 35 : 0,
@@ -1607,9 +1582,8 @@ class _MyMaplibreState extends State<MyMapLibre>
                           ? backgroundActive
                           : Colors.white,
                       child: IconButton(
-                        tooltip: (getZoom() > editZoom)
-                            ? AppLocalizations.of(context)!.tooltipoAddWaypoint
-                            : AppLocalizations.of(context)!.zoomInToEdit,
+                        tooltip:
+                            AppLocalizations.of(context)!.tooltipoAddWaypoint,
                         icon: AnimatedScale(
                           scale: editMode ? 1 : 0,
                           duration: Duration(milliseconds: 300),

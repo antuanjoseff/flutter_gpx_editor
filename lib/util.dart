@@ -22,8 +22,6 @@ DateTime? avgTime(DateTime? startTime, DateTime? endTime) {
         ((endTime.millisecondsSinceEpoch - startTime.millisecondsSinceEpoch) /
                 2)
             .round();
-    print('INCREMENT  ................. $inc');
-
     return DateTime.fromMillisecondsSinceEpoch(
         startTime.millisecondsSinceEpoch + inc,
         isUtc: true);
@@ -234,4 +232,20 @@ String formatDuration(Duration duration) {
 
 double getSpeedValueOnElevationAxis(val, maxX, maxY, minY, minY2, maxY2) {
   return (val - minY) / (maxY - minY) * (maxY2 - minY2) + minY2;
+}
+
+bool coordInBounds(LatLng coord, LatLngBounds viewBounds) {
+  return ((viewBounds.northeast.latitude >= coord.latitude &&
+          viewBounds.northeast.longitude >= coord.longitude) &&
+      (viewBounds.southwest.latitude <= coord.latitude &&
+          viewBounds.southwest.longitude <= coord.longitude));
+}
+
+Future<bool> coordInMapControllerView(coord, mapController) async {
+  LatLngBounds viewBounds = await mapController!.getVisibleRegion();
+  if (coordInBounds(coord, viewBounds)) {
+    return true;
+  } else {
+    return false;
+  }
 }
