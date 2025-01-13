@@ -110,6 +110,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   List<Symbol> wptSymbols = [];
   List<Wpt> mapWayPoints = []; //Gpx WPTS
 
+  bool showAddNodePointer = false;
   bool infoMode = false;
   bool showChart = true;
   double arrowRotation = 0;
@@ -142,7 +143,7 @@ class _MyMaplibreState extends State<MyMapLibre>
   late double maxY;
 
   final thr = Throttling<void>(duration: const Duration(milliseconds: 100));
-  final deb = Debouncing<void>(duration: const Duration(milliseconds: 100));
+  final deb = Debouncing<void>(duration: const Duration(milliseconds: 200));
 
   _MyMaplibreState(Controller controller) {
     controller.loadTrack = loadTrack;
@@ -268,7 +269,9 @@ class _MyMaplibreState extends State<MyMapLibre>
     if (disableMapChanged) {
       return;
     }
+
     if (editTools['add']!) {
+      showAddNodePointer = !showAddNodePointer ? true : showAddNodePointer;
       if (bottomSheetController != null) {
         bottomSheetController?.close();
       }
@@ -282,6 +285,7 @@ class _MyMaplibreState extends State<MyMapLibre>
         disableMapChanged = false;
       });
     }
+
     setState(() {});
   }
 
@@ -600,7 +604,7 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   Future<bool> addNode(distance, nodeIdx, candidate) async {
     // var (dist, nodeIdx, P) = track!.getCandidateNode(candidate);
-    debugPrint('nodeIdx $nodeIdx');
+    // disableMapChanged = true;
     if (distance < 50) {
       Symbol added = await mapController!.addSymbol(SymbolOptions(
           draggable: false, iconImage: 'node-plain', geometry: candidate));
@@ -615,14 +619,17 @@ class _MyMaplibreState extends State<MyMapLibre>
       edits.add((nodeIdx + 1, newWpt, 'add'));
 
       track!.addNode(nodeIdx, newWpt);
-      updateTrackLine();
+      // updateTrackLine();
 
       manipulatedIndexes.add(nodeIdx);
       manipulatedIndexes =
           updateManipulatedIndexes('add', nodeIdx, manipulatedIndexes);
 
-      // await redrawNodeSymbols();
-      // setState(() {});
+      // disableMapChanged = false;
+      setState(() {
+        showAddNodePointer = false;
+      });
+
       return true;
     } else {
       // Show snackbar message
@@ -1302,7 +1309,7 @@ class _MyMaplibreState extends State<MyMapLibre>
             // styleString: mapStyle
             ),
 
-        if (editTools['add']!) ...[
+        if (editTools['add']! && showAddNodePointer) ...[
           GestureDetector(
             onTap: () async {
               // pan map to closest node and show dialog box
@@ -1554,7 +1561,7 @@ class _MyMaplibreState extends State<MyMapLibre>
                       ),
                       onPressed: () async {
                         toggleTool('add');
-
+                        showAddNodePointer = true;
                         colorIcon1 = defaultColorIcon1;
                         colorIcon2 = defaultColorIcon2;
 
