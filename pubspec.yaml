@@ -85,6 +85,7 @@ flutter:
     - assets/symbols/
     # - assets/symbols/node-plain.png
     # - assets/symbols/node-plain-web.png
+    # - assets/symbols/new-node-plain-web.png
     # - assets/symbols/node-drag.png
     # - assets/symbols/node-delete.png
     # - assets/symbols/waypoint.png

@@ -249,9 +249,26 @@ class _MyHomePageState extends State<MyHomePage> {
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
           // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           automaticallyImplyLeading: false,
-          title: Text(
-            AppLocalizations.of(context)!.appTitle,
-            style: const TextStyle(color: Colors.white, fontSize: 20),
+          title: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: white,
+                child: Builder(builder: (context) {
+                  return IconButton(
+                    onPressed: () {
+                      Scaffold.of(context).openEndDrawer();
+                    },
+                    icon: Icon(Icons.layers),
+                    color: primaryColor,
+                  );
+                }),
+              ),
+              SizedBox(width: 5),
+              Text(
+                AppLocalizations.of(context)!.appTitle,
+                style: const TextStyle(color: Colors.white, fontSize: 20),
+              ),
+            ],
           ),
           actions: [
             ...[
