@@ -214,13 +214,11 @@ class _TrackInfoState extends State<TrackInfo> {
                   getTooltipColor: (LineBarSpot touchedSpot) => Colors.green,
                   getTooltipItems: (List<LineBarSpot> lineBarsSpot) {
                     LineBarSpot lineBarSpot = lineBarsSpot[0];
-                    // Data on Y axis (elevation and speed) is concatenated on one array.
-                    // So, spotIndex sometimes is bigger than the data itself
-                    int idx = lineBarSpot.spotIndex;
-                    if (idx > elevationSpots.length) {
-                      idx = (idx / 2).floor();
-                    }
 
+                    // Find index in array that has X value
+                    int idx = lengthValues.indexOf(lineBarSpot.x.floor());
+
+                    // widget.controller.showNode(widget.track!.getNode(idx));
                     widget.controller.showNode(widget.track!.getNode(idx));
 
                     int e = elevationValues[idx];

@@ -49,6 +49,10 @@ class _MyMaplibreState extends State<MyMapLibre>
     'addWayPoint': false
   };
 
+  // Screen size vars
+  late double screenWidth;
+  late double screenHeight;
+
   // var to know average distance between track nodes
   double nodesRatio = 0;
   bool showBottomPanel = false;
@@ -168,6 +172,9 @@ class _MyMaplibreState extends State<MyMapLibre>
 
   @override
   void initState() {
+    sreenWidth = MediaQuery.sizeOf(context).width;
+    screenHeight = MediaQuery.sizeOf(context).height;
+
     colorIcon1 = defaultColorIcon1;
     colorIcon2 = defaultColorIcon2;
     backgroundColor = backgroundInactive;
@@ -1766,7 +1773,11 @@ class _MyMaplibreState extends State<MyMapLibre>
                             style: TextStyle(
                                 color: white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: kIsWeb ? 18 : 10),
+                                fontSize: kIsWeb
+                                    ? 16
+                                    : screenWidth <= 360
+                                        ? 9
+                                        : 10),
                             child: Padding(
                               padding: const EdgeInsets.all(5),
                               // padding: const EdgeInsets.all(kIsWeb ? 8.0 : 4),
